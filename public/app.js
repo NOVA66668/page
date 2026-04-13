@@ -6,7 +6,9 @@ const storeCount = document.getElementById("storeCount");
 const productCount = document.getElementById("productCount");
 const scanBtn = document.getElementById("scanBtn");
 const refreshBtn = document.getElementById("refreshBtn");
+const clearBtn = document.getElementById("clearBtn");
 const domainsBox = document.getElementById("domains");
+const daysFilter = document.getElementById("daysFilter");
 
 function setStatus(label, detail) {
   statusPill.textContent = label;
@@ -70,7 +72,10 @@ async function runScan() {
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ domains })
+      body: JSON.stringify({
+        domains,
+        days: Number(daysFilter.value || 30)
+      })
     });
     const data = await res.json();
     setStatus("Completed", JSON.stringify(data, null, 2));
@@ -82,6 +87,25 @@ async function runScan() {
   }
 }
 
+async function clearAllData() {
+  const confirmed = window.confirm("Delete all saved stores, products, and scan history?");
+  if (!confirmed) return;
+
+  clearBtn.disabled = true;
+  setStatus("Clearing", "Deleting all saved data…");
+  try {
+    const res = await fetch("/api/clear", { method: "POST" });
+    const data = await res.json();
+    setStatus("Cleared", JSON.stringify(data, null, 2));
+    await loadStores();
+  } catch (err) {
+    setStatus("Error", `Clear failed.\n${err}`);
+  } finally {
+    clearBtn.disabled = false;
+  }
+}
+
 scanBtn.addEventListener("click", runScan);
 refreshBtn.addEventListener("click", loadStores);
+clearBtn.addEventListener("click", clearAllData);
 loadStores();

@@ -18,12 +18,24 @@
       </p>
 
       <div class="controls">
+        <div class="toolbar">
+          <div class="field-group compact">
+            <label for="daysFilter">Certificate window</label>
+            <select id="daysFilter">
+              <option value="7">Last 7 days</option>
+              <option value="15">Last 15 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="365">Last 365 days</option>
+            </select>
+          </div>
+        </div>
         <textarea id="domains" placeholder="Optional domains, one per line&#10;example.com&#10;shop.example"></textarea>
         <div class="actions">
           <button id="scanBtn">Run Scan</button>
           <button id="refreshBtn" class="secondary">Refresh Results</button>
+          <button id="clearBtn" class="danger">Clear All Data</button>
         </div>
-        <p class="hint">Leave empty to scan the built-in seed list. This demo uses public storefront data only.</p>
+        <p class="hint">If the box is empty, discovery uses public certificate dates inside the selected time window. Manual domains override the filter.</p>
       </div>
     </section>
 
