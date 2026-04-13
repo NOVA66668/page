@@ -36,27 +36,30 @@ async function loadStores() {
     const products = data.products || [];
 
     storeCount.textContent = `${stores.length} stores`;
-    productCount.textContent = `${products.length} products`;
+    productCount.textContent = `${products.length} recent products`;
 
     storesBody.innerHTML = stores.map(s => `
       <tr>
         <td><a href="https://${s.domain}" target="_blank" rel="noreferrer">${s.domain}</a><br><small>${s.title || ""}</small></td>
         <td>${s.platform || "unknown"}</td>
-        <td>${s.domain_age_days ?? "unknown"}</td>
-        <td>${fmtDate(s.domain_registered_at)}</td>
-        <td>${fmtDate(s.first_product_seen_at)}</td>
-        <td>${s.age_confidence ?? 0}</td>
+        <td>${s.recent_product_count ?? 0}</td>
+        <td>${fmtDate(s.first_recent_product_at)}</td>
+        <td>${fmtDate(s.last_product_updated_at)}</td>
+        <td>${fmtDate(s.approximate_first_product_at)}</td>
+        <td>${s.discovery_method || "unknown"}</td>
         <td>${s.products_count ?? 0}</td>
-        <td>${s.sold_out_count ?? 0}</td>
         <td>${s.score ?? 0}</td>
       </tr>
     `).join("");
 
-    productsGrid.innerHTML = products.slice(0, 60).map(p => `
+    productsGrid.innerHTML = products.slice(0, 80).map(p => `
       <article class="product-card">
         <h3>${p.title || "Untitled product"}</h3>
         <div class="meta">${p.store_domain || ""}</div>
-        <div class="meta">${p.price || "Price not found"} ${p.currency || ""}</div>
+        <div class="meta">Price: ${p.price || "not found"} ${p.currency || ""}</div>
+        <div class="meta">Created: ${fmtDate(p.remote_created_at)}</div>
+        <div class="meta">Published: ${fmtDate(p.remote_published_at)}</div>
+        <div class="meta">Updated: ${fmtDate(p.remote_updated_at)}</div>
         <div class="meta"><a href="${p.url || "#"}" target="_blank" rel="noreferrer">${p.url || "No URL"}</a></div>
         ${productTag(p.availability)}
       </article>
@@ -70,7 +73,7 @@ async function loadStores() {
 
 async function runScan() {
   scanBtn.disabled = true;
-  setStatus("Running", "Starting scan…");
+  setStatus("Running", "Scanning Shopify stores and recent products…");
   try {
     const domains = domainsBox.value
       .split("\n")

@@ -4,23 +4,11 @@ import {
   guessCountryFromDomain,
   detectCurrency,
   detectPlatform,
-  guessAvailability,
   extractTitle,
   fetchText,
-  stripHtml,
-  extractProductLinks,
-  scoreStore,
   uniqueBy,
   type Env
 } from "./_utils";
-
-type Product = {
-  title: string;
-  url: string;
-  price: string | null;
-  currency: string | null;
-  availability: string;
-};
 
 type CrtShRow = {
   common_name?: string;
@@ -29,291 +17,182 @@ type CrtShRow = {
   not_before?: string;
 };
 
-type DomainAgeInfo = {
-  registeredAt: string | null;
-  ageDays: number | null;
+type ShopifyProduct = {
+  title?: string;
+  handle?: string;
+  created_at?: string;
+  published_at?: string | null;
+  updated_at?: string;
+  variants?: Array<{
+    price?: string | number | null;
+    available?: boolean;
+  }>;
 };
 
-type FirstSeenInfo = {
-  timestamp: string | null;
-  source: "commoncrawl" | null;
+type ProductRow = {
+  title: string;
+  url: string;
+  price: string | null;
+  currency: string | null;
+  availability: string;
+  created_at: string | null;
+  published_at: string | null;
+  updated_at: string | null;
 };
 
-const FALLBACK_SEEDS = [
-  "allbirds.com",
-  "gymshark.com",
-  "colourpop.com",
-  "khadijabeauty.ma",
-  "myprotein.com",
-  "fashionnova.com",
-  "morphe.com",
-  "uk.tentree.com"
-];
-
-function normalizeCrtDomain(value: string): string {
-  return normalizeDomain(value.replace(/^\*\./, ""));
-}
-
-function toTimestamp(value?: string): number {
+function toTimestamp(value?: string | null): number {
   if (!value) return 0;
   const ts = Date.parse(value);
   return Number.isFinite(ts) ? ts : 0;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function normalizeCrtDomain(value: string): string {
+  return normalizeDomain(value.replace(/^\*\./, ""));
 }
 
-function parseRegisteredAt(rdap: any): string | null {
-  const events = Array.isArray(rdap?.events) ? rdap.events : [];
-  const preferred = events.find((event: any) => {
-    const action = String(event?.eventAction || "").toLowerCase();
-    return action === "registration" || action === "registered";
-  });
-  if (preferred?.eventDate && Number.isFinite(Date.parse(preferred.eventDate))) {
-    return new Date(preferred.eventDate).toISOString();
-  }
+async function fetchRecentCertificateDomains(): Promise<string[]> {
+  const queries = ["%.myshopify.com", "%.shop", "%.store", "%.boutique"];
+  const cutoff = Date.now() - 45 * 24 * 60 * 60 * 1000;
+  const found: Array<{ domain: string; ts: number }> = [];
 
-  const fallback = events.find((event: any) => {
-    const action = String(event?.eventAction || "").toLowerCase();
-    return action.includes("registration") || action.includes("create");
-  });
-  if (fallback?.eventDate && Number.isFinite(Date.parse(fallback.eventDate))) {
-    return new Date(fallback.eventDate).toISOString();
-  }
-  return null;
-}
+  for (const query of queries) {
+    const url = `https://crt.sh/?q=${encodeURIComponent(query)}&output=json`;
+    const text = await fetchText(url);
+    if (!text) continue;
 
-async function fetchDomainAgeInfo(domain: string): Promise<DomainAgeInfo> {
-  const url = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "accept": "application/rdap+json, application/json;q=0.9, */*;q=0.8",
-        "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)"
-      },
-      cache: "no-store"
-    });
-    if (!response.ok) return { registeredAt: null, ageDays: null };
-    const rdap = await response.json();
-    const registeredAt = parseRegisteredAt(rdap);
-    if (!registeredAt) return { registeredAt: null, ageDays: null };
-    const ageDays = Math.floor((Date.now() - Date.parse(registeredAt)) / 86400000);
-    return {
-      registeredAt,
-      ageDays: Number.isFinite(ageDays) && ageDays >= 0 ? ageDays : null
-    };
-  } catch {
-    return { registeredAt: null, ageDays: null };
-  }
-}
+    let rows: CrtShRow[] = [];
+    try {
+      rows = JSON.parse(text);
+    } catch {
+      continue;
+    }
 
-async function fetchRecentCertificateDomains(days: number, query: string): Promise<Array<{ domain: string; ts: number }>> {
-  const url = `https://crt.sh/?q=${encodeURIComponent(query)}&output=json`;
-  const text = await fetchText(url);
-  if (!text) return [];
-
-  let rows: CrtShRow[] = [];
-  try {
-    rows = JSON.parse(text);
-  } catch {
-    return [];
-  }
-
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  const out: Array<{ domain: string; ts: number }> = [];
-
-  for (const row of rows) {
-    const ts = Math.max(toTimestamp(row.entry_timestamp), toTimestamp(row.not_before));
-    if (!ts || ts < cutoff) continue;
-
-    for (const source of [row.common_name, row.name_value]) {
-      if (!source) continue;
-      for (const raw of source.split(/\r?\n/)) {
-        const domain = normalizeCrtDomain(raw);
-        if (!domain || domain.includes("*")) continue;
-        if (domain.endsWith(".local") || domain.endsWith(".invalid")) continue;
-        out.push({ domain, ts });
+    for (const row of rows) {
+      const ts = Math.max(toTimestamp(row.entry_timestamp), toTimestamp(row.not_before));
+      if (!ts || ts < cutoff) continue;
+      for (const source of [row.common_name, row.name_value]) {
+        if (!source) continue;
+        for (const raw of source.split(/\r?\n/)) {
+          const domain = normalizeCrtDomain(raw);
+          if (!domain || domain.includes("*")) continue;
+          if (domain.endsWith(".local") || domain.endsWith(".invalid")) continue;
+          found.push({ domain, ts });
+        }
       }
     }
   }
 
+  return uniqueBy(
+    found.sort((a, b) => b.ts - a.ts).slice(0, 120),
+    (item) => item.domain
+  ).map((item) => item.domain);
+}
+
+async function fetchShopifyProducts(domain: string): Promise<ShopifyProduct[]> {
+  const endpoints = [
+    `https://${domain}/products.json?limit=250`,
+    `https://${domain}/collections/all/products.json?limit=250`
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          "accept": "application/json,text/plain;q=0.9,*/*;q=0.8",
+          "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)"
+        },
+        cache: "no-store"
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (Array.isArray(data?.products)) return data.products;
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
+}
+
+function ensureIso(value?: string | null): string | null {
+  if (!value) return null;
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return null;
+  return new Date(ts).toISOString();
+}
+
+function isRecent(value: string | null, days: number): boolean {
+  if (!value) return false;
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return false;
+  return ts >= Date.now() - days * 24 * 60 * 60 * 1000;
+}
+
+function mapProducts(domain: string, rawProducts: ShopifyProduct[], currencyGuess: string | null): ProductRow[] {
+  const out: ProductRow[] = [];
+  for (const product of rawProducts) {
+    const title = String(product.title || "Untitled product");
+    const handle = String(product.handle || "").trim();
+    if (!handle) continue;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const firstVariant = variants.find(Boolean);
+    const anyAvailable = variants.some((v) => Boolean(v?.available));
+    out.push({
+      title,
+      url: `https://${domain}/products/${handle}`,
+      price: firstVariant?.price != null ? String(firstVariant.price) : null,
+      currency: currencyGuess,
+      availability: anyAvailable ? "in_stock" : "unknown",
+      created_at: ensureIso(product.created_at),
+      published_at: ensureIso(product.published_at || null),
+      updated_at: ensureIso(product.updated_at)
+    });
+  }
   return out;
 }
 
-async function fetchCommonCrawlCollections(): Promise<string[]> {
-  try {
-    const response = await fetch("https://index.commoncrawl.org/collinfo.json", {
-      headers: { "accept": "application/json", "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)" }
-    });
-    if (!response.ok) return [];
-    const items = await response.json();
-    if (!Array.isArray(items)) return [];
-    return items
-      .map((item: any) => String(item?.id || ""))
-      .filter(Boolean)
-      .sort();
-  } catch {
-    return [];
-  }
-}
+function classifyRecentProducts(products: ProductRow[], days: number): {
+  recentProducts: ProductRow[];
+  firstRecentProductAt: string | null;
+  lastProductUpdatedAt: string | null;
+  approximateFirstProductAt: string | null;
+} {
+  const recentProducts = products.filter((p) =>
+    isRecent(p.created_at, days) || isRecent(p.published_at, days) || isRecent(p.updated_at, days)
+  );
 
-function ccTimestampToIso(value: string): string | null {
-  if (!/^\d{14}$/.test(value)) return null;
-  const iso = `${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}T${value.slice(8,10)}:${value.slice(10,12)}:${value.slice(12,14)}Z`;
-  return Number.isFinite(Date.parse(iso)) ? iso : null;
-}
+  const firstRecentProductAt = recentProducts
+    .flatMap((p) => [p.created_at, p.published_at].filter(Boolean) as string[])
+    .sort()[0] || null;
 
-async function fetchFirstSeenInCommonCrawl(urls: string[]): Promise<FirstSeenInfo> {
-  const collections = await fetchCommonCrawlCollections();
-  if (!collections.length || !urls.length) return { timestamp: null, source: null };
+  const lastProductUpdatedAt = recentProducts
+    .map((p) => p.updated_at)
+    .filter(Boolean)
+    .sort()
+    .reverse()[0] || null;
 
-  let best: string | null = null;
-  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
-
-  for (const coll of collections) {
-    for (const url of uniqueUrls.slice(0, 8)) {
-      const endpoint = `https://index.commoncrawl.org/${coll}-index?url=${encodeURIComponent(url)}&output=json&fl=timestamp,url&filter=status:200&pageSize=1`;
-      try {
-        const response = await fetch(endpoint, {
-          headers: { "accept": "application/json,text/plain;q=0.9,*/*;q=0.8", "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)" },
-          cache: "no-store"
-        });
-        if (!response.ok) continue;
-        const text = await response.text();
-        const firstLine = text.trim().split(/\r?\n/).find(Boolean);
-        if (!firstLine) continue;
-        const row = JSON.parse(firstLine);
-        const iso = ccTimestampToIso(String(row?.timestamp || ""));
-        if (iso && (!best || iso < best)) {
-          best = iso;
-        }
-      } catch {
-        continue;
-      }
-      await sleep(120);
-    }
-    if (best) break;
-  }
-
-  return { timestamp: best, source: best ? "commoncrawl" : null };
-}
-
-async function discoverCandidates(maxAgeDays: number): Promise<string[]> {
-  const queries = [
-    "%.myshopify.com",
-    "%.shop",
-    "%.store",
-    "%.boutique"
-  ];
-
-  const recent = (await Promise.all(queries.map((query) => fetchRecentCertificateDomains(Math.max(maxAgeDays, 30), query))))
-    .flat()
-    .sort((a, b) => b.ts - a.ts);
-
-  const uniqueRecent = uniqueBy(recent, (item) => item.domain).slice(0, 60);
-  const accepted: string[] = [];
-
-  for (const item of uniqueRecent) {
-    const age = await fetchDomainAgeInfo(item.domain);
-    if (age.ageDays !== null && age.ageDays <= maxAgeDays) {
-      accepted.push(item.domain);
-    }
-    if (accepted.length >= 20) break;
-    await sleep(180);
-  }
-
-  return accepted.length ? accepted : FALLBACK_SEEDS;
-}
-
-async function scanStore(domain: string): Promise<{
-  domain: string;
-  platform: string;
-  title: string;
-  country_guess: string | null;
-  currency_guess: string | null;
-  products: Product[];
-  sold_out_count: number;
-  score: number;
-  domain_registered_at: string | null;
-  domain_age_days: number | null;
-  first_store_seen_at: string | null;
-  first_product_seen_at: string | null;
-  age_confidence: number;
-} | null> {
-  const url = `https://${normalizeDomain(domain)}/`;
-  const html = await fetchText(url);
-  if (!html) return null;
-
-  const platform = detectPlatform(html);
-  const title = extractTitle(html, domain);
-  const text = stripHtml(html).slice(0, 100000);
-  const country_guess = guessCountryFromDomain(domain);
-  const currency_guess = detectCurrency(text);
-
-  const productLinks = extractProductLinks(url, html);
-  const products: Product[] = [];
-
-  for (const link of productLinks.slice(0, 12)) {
-    const phtml = await fetchText(link);
-    if (!phtml) continue;
-    const ptitle = extractTitle(phtml, link.split("/").pop() || "Product");
-    const availability = guessAvailability(phtml);
-    const productText = stripHtml(phtml).slice(0, 30000);
-    const productCurrency = detectCurrency(productText) || currency_guess;
-    const priceMatch = phtml.match(/(?:\$|€|£|MAD|AED|SAR|USD|EUR|GBP)\s?[0-9]+(?:[.,][0-9]{1,2})?/i);
-    products.push({
-      title: ptitle,
-      url: link,
-      price: priceMatch?.[0] ?? null,
-      currency: productCurrency,
-      availability
-    });
-  }
-
-  const uniqueProducts = uniqueBy(products, p => `${p.title}|${p.url}`);
-  const sold_out_count = uniqueProducts.filter(p => p.availability === "sold_out").length;
-  const score = scoreStore({
-    platform,
-    country_guess,
-    currency_guess,
-    products_count: uniqueProducts.length,
-    sold_out_count
-  });
-
-  const domainAge = await fetchDomainAgeInfo(domain);
-  const firstStoreSeen = await fetchFirstSeenInCommonCrawl([url]);
-  const firstProductSeen = await fetchFirstSeenInCommonCrawl(uniqueProducts.map((p) => p.url));
-
-  let ageConfidence = 0;
-  if (firstProductSeen.timestamp) ageConfidence += 0.6;
-  if (firstStoreSeen.timestamp) ageConfidence += 0.25;
-  if (domainAge.registeredAt) ageConfidence += 0.15;
+  const approximateFirstProductAt = products
+    .flatMap((p) => [p.created_at, p.published_at].filter(Boolean) as string[])
+    .sort()[0] || null;
 
   return {
-    domain: normalizeDomain(domain),
-    platform,
-    title,
-    country_guess,
-    currency_guess,
-    products: uniqueProducts,
-    sold_out_count,
-    score,
-    domain_registered_at: domainAge.registeredAt,
-    domain_age_days: domainAge.ageDays,
-    first_store_seen_at: firstStoreSeen.timestamp,
-    first_product_seen_at: firstProductSeen.timestamp,
-    age_confidence: Number(ageConfidence.toFixed(2))
+    recentProducts,
+    firstRecentProductAt,
+    lastProductUpdatedAt,
+    approximateFirstProductAt
   };
 }
 
-async function ensureAgeColumns(DB: D1Database): Promise<void> {
+async function ensureColumns(DB: D1Database): Promise<void> {
   const statements = [
-    "ALTER TABLE stores ADD COLUMN domain_registered_at TEXT",
-    "ALTER TABLE stores ADD COLUMN domain_age_days INTEGER",
-    "ALTER TABLE stores ADD COLUMN first_store_seen_at TEXT",
-    "ALTER TABLE stores ADD COLUMN first_product_seen_at TEXT",
-    "ALTER TABLE stores ADD COLUMN age_confidence REAL DEFAULT 0"
+    "ALTER TABLE stores ADD COLUMN recent_product_count INTEGER DEFAULT 0",
+    "ALTER TABLE stores ADD COLUMN first_recent_product_at TEXT",
+    "ALTER TABLE stores ADD COLUMN last_product_updated_at TEXT",
+    "ALTER TABLE stores ADD COLUMN approximate_first_product_at TEXT",
+    "ALTER TABLE stores ADD COLUMN discovery_method TEXT",
+    "ALTER TABLE products ADD COLUMN remote_created_at TEXT",
+    "ALTER TABLE products ADD COLUMN remote_published_at TEXT",
+    "ALTER TABLE products ADD COLUMN remote_updated_at TEXT"
   ];
   for (const sql of statements) {
     try {
@@ -325,32 +204,59 @@ async function ensureAgeColumns(DB: D1Database): Promise<void> {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const startedAt = new Date().toISOString();
   const { DB } = context.env;
-  await ensureAgeColumns(DB);
+  await ensureColumns(DB);
 
   const body = await context.request.json().catch(() => ({} as any));
   const days = [7, 15, 30, 365].includes(Number(body?.days)) ? Number(body.days) : 30;
-  const domains = Array.isArray(body?.domains) ? body.domains.map((d: string) => normalizeDomain(d)).filter(Boolean) : [];
-  const candidates = domains.length ? domains.slice(0, 15) : await discoverCandidates(days);
+  const manualDomains = Array.isArray(body?.domains)
+    ? body.domains.map((d: string) => normalizeDomain(d)).filter(Boolean)
+    : [];
+
+  const candidates = manualDomains.length ? manualDomains.slice(0, 20) : await fetchRecentCertificateDomains();
 
   const scanResult = await DB.prepare(
     "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
-  ).bind(startedAt, domains.length ? `manual domains (${domains.length})` : `domain age <= ${days} days + first product seen`).run();
+  ).bind(startedAt, manualDomains.length ? `manual domains (${manualDomains.length})` : `shopify recent products <= ${days} days`).run();
   const scanId = scanResult.meta.last_row_id;
 
   let storesFound = 0;
   let productsFound = 0;
+  let inspected = 0;
 
-  for (const domain of candidates) {
-    const result = await scanStore(domain);
-    if (!result) continue;
+  for (const domain of candidates.slice(0, 40)) {
+    inspected += 1;
+    const homepage = await fetchText(`https://${domain}/`);
+    if (!homepage) continue;
+
+    const platform = detectPlatform(homepage);
+    if (platform !== "shopify") continue;
+
+    const title = extractTitle(homepage, domain);
+    const countryGuess = guessCountryFromDomain(domain);
+    const currencyGuess = detectCurrency(homepage);
+    const rawProducts = await fetchShopifyProducts(domain);
+    if (!rawProducts.length) continue;
+
+    const allProducts = mapProducts(domain, rawProducts, currencyGuess);
+    const { recentProducts, firstRecentProductAt, lastProductUpdatedAt, approximateFirstProductAt } = classifyRecentProducts(allProducts, days);
+    if (!recentProducts.length) continue;
+
+    const score = scoreStore({
+      platform,
+      country_guess: countryGuess,
+      currency_guess: currencyGuess,
+      products_count: recentProducts.length,
+      sold_out_count: 0
+    });
 
     storesFound += 1;
-    productsFound += result.products.length;
+    productsFound += recentProducts.length;
 
     await DB.prepare(`
       INSERT INTO stores (
         domain, platform, country_guess, currency_guess, title, score, products_count, sold_out_count,
-        last_scan_at, domain_registered_at, domain_age_days, first_store_seen_at, first_product_seen_at, age_confidence
+        last_scan_at, recent_product_count, first_recent_product_at, last_product_updated_at,
+        approximate_first_product_at, discovery_method
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(domain) DO UPDATE SET
@@ -362,34 +268,47 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         products_count=excluded.products_count,
         sold_out_count=excluded.sold_out_count,
         last_scan_at=excluded.last_scan_at,
-        domain_registered_at=excluded.domain_registered_at,
-        domain_age_days=excluded.domain_age_days,
-        first_store_seen_at=excluded.first_store_seen_at,
-        first_product_seen_at=excluded.first_product_seen_at,
-        age_confidence=excluded.age_confidence
+        recent_product_count=excluded.recent_product_count,
+        first_recent_product_at=excluded.first_recent_product_at,
+        last_product_updated_at=excluded.last_product_updated_at,
+        approximate_first_product_at=excluded.approximate_first_product_at,
+        discovery_method=excluded.discovery_method
     `).bind(
-      result.domain,
-      result.platform,
-      result.country_guess,
-      result.currency_guess,
-      result.title,
-      result.score,
-      result.products.length,
-      result.sold_out_count,
+      domain,
+      platform,
+      countryGuess,
+      currencyGuess,
+      title,
+      score,
+      allProducts.length,
+      0,
       startedAt,
-      result.domain_registered_at,
-      result.domain_age_days,
-      result.first_store_seen_at,
-      result.first_product_seen_at,
-      result.age_confidence
+      recentProducts.length,
+      firstRecentProductAt,
+      lastProductUpdatedAt,
+      approximateFirstProductAt,
+      manualDomains.length ? "manual" : "crt.sh -> shopify products.json"
     ).run();
 
-    await DB.prepare("DELETE FROM products WHERE store_domain = ?").bind(result.domain).run();
-    for (const p of result.products) {
+    await DB.prepare("DELETE FROM products WHERE store_domain = ?").bind(domain).run();
+    for (const p of recentProducts.slice(0, 60)) {
       await DB.prepare(`
-        INSERT INTO products (store_domain, title, url, price, currency, availability)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(result.domain, p.title, p.url, p.price, p.currency, p.availability).run();
+        INSERT INTO products (
+          store_domain, title, url, price, currency, availability,
+          remote_created_at, remote_published_at, remote_updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        domain,
+        p.title,
+        p.url,
+        p.price,
+        p.currency,
+        p.availability,
+        p.created_at,
+        p.published_at,
+        p.updated_at
+      ).run();
     }
   }
 
@@ -400,8 +319,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return json({
     ok: true,
     scan_id: scanId,
-    scan_mode: domains.length ? "manual_domains" : "domain_age_plus_first_product_seen",
+    scan_mode: manualDomains.length ? "manual_domains" : "shopify_recent_products",
     days,
+    candidates_inspected: inspected,
     candidates,
     stores_found: storesFound,
     products_found: productsFound

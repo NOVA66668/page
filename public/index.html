@@ -11,21 +11,22 @@
   <main class="container">
     <section class="hero">
       <span class="badge">Cloudflare Pages + D1 Demo</span>
-      <h1>Find new stores. Track products. Spot sold-out signals.</h1>
+      <h1>Find Shopify stores with recent product activity.</h1>
       <p class="lead">
-        A lightweight market-intel dashboard running on Cloudflare Pages Functions with D1 storage.
-        Trigger scans manually, review the top stores, and inspect product availability clues.
+        This lighter version focuses on Shopify only. It reads public <code>/products.json</code> feeds,
+        keeps stores that have products created, published, or updated inside the selected window,
+        and shows the most actionable results first.
       </p>
 
       <div class="controls">
         <div class="toolbar">
           <div class="field-group compact">
-            <label for="daysFilter">Domain age filter</label>
+            <label for="daysFilter">Recent product window</label>
             <select id="daysFilter">
-              <option value="7">Up to 7 days</option>
-              <option value="15">Up to 15 days</option>
-              <option value="30" selected>Up to 30 days</option>
-              <option value="365">Up to 365 days</option>
+              <option value="7">Last 7 days</option>
+              <option value="15">Last 15 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="365">Last 365 days</option>
             </select>
           </div>
         </div>
@@ -35,7 +36,7 @@
           <button id="refreshBtn" class="secondary">Refresh Results</button>
           <button id="clearBtn" class="danger">Clear All Data</button>
         </div>
-        <p class="hint">Empty input uses public candidates, then narrows them with RDAP domain age and first public product/page evidence from crawl indexes. Manual domains override the filter.</p>
+        <p class="hint">Empty input uses public candidate domains, then keeps only Shopify stores with recent product activity. Manual domains override discovery.</p>
       </div>
     </section>
 
@@ -58,12 +59,12 @@
             <tr>
               <th>Store</th>
               <th>Platform</th>
-              <th>Domain Age</th>
-              <th>Registered</th>
-              <th>First Product Seen</th>
-              <th>Confidence</th>
-              <th>Products</th>
-              <th>Sold Out</th>
+              <th>Recent Products</th>
+              <th>First Recent</th>
+              <th>Last Updated</th>
+              <th>Approx First Product</th>
+              <th>Discovery</th>
+              <th>Total Products</th>
               <th>Score</th>
             </tr>
           </thead>
