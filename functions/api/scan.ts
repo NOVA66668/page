@@ -29,6 +29,11 @@ type CrtShRow = {
   not_before?: string;
 };
 
+type DomainAgeInfo = {
+  registeredAt: string | null;
+  ageDays: number | null;
+};
+
 const FALLBACK_SEEDS = [
   "allbirds.com",
   "gymshark.com",
@@ -48,6 +53,54 @@ function toTimestamp(value?: string): number {
   if (!value) return 0;
   const ts = Date.parse(value);
   return Number.isFinite(ts) ? ts : 0;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRegisteredAt(rdap: any): string | null {
+  const events = Array.isArray(rdap?.events) ? rdap.events : [];
+  const preferred = events.find((event: any) => {
+    const action = String(event?.eventAction || "").toLowerCase();
+    return action === "registration" || action === "registered";
+  });
+  if (preferred?.eventDate && Number.isFinite(Date.parse(preferred.eventDate))) {
+    return new Date(preferred.eventDate).toISOString();
+  }
+
+  const fallback = events.find((event: any) => {
+    const action = String(event?.eventAction || "").toLowerCase();
+    return action.includes("registration") || action.includes("create");
+  });
+  if (fallback?.eventDate && Number.isFinite(Date.parse(fallback.eventDate))) {
+    return new Date(fallback.eventDate).toISOString();
+  }
+  return null;
+}
+
+async function fetchDomainAgeInfo(domain: string): Promise<DomainAgeInfo> {
+  const url = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "accept": "application/rdap+json, application/json;q=0.9, */*;q=0.8",
+        "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)"
+      },
+      cache: "no-store"
+    });
+    if (!response.ok) return { registeredAt: null, ageDays: null };
+    const rdap = await response.json();
+    const registeredAt = parseRegisteredAt(rdap);
+    if (!registeredAt) return { registeredAt: null, ageDays: null };
+    const ageDays = Math.floor((Date.now() - Date.parse(registeredAt)) / 86400000);
+    return {
+      registeredAt,
+      ageDays: Number.isFinite(ageDays) && ageDays >= 0 ? ageDays : null
+    };
+  } catch {
+    return { registeredAt: null, ageDays: null };
+  }
 }
 
 async function fetchRecentCertificateDomains(days: number, query: string): Promise<Array<{ domain: string; ts: number }>> {
@@ -83,7 +136,7 @@ async function fetchRecentCertificateDomains(days: number, query: string): Promi
   return out;
 }
 
-async function discoverCandidates(days: number): Promise<string[]> {
+async function discoverCandidates(maxAgeDays: number): Promise<string[]> {
   const queries = [
     "%.myshopify.com",
     "%.shop",
@@ -91,16 +144,23 @@ async function discoverCandidates(days: number): Promise<string[]> {
     "%.boutique"
   ];
 
-  const recent = (await Promise.all(queries.map((query) => fetchRecentCertificateDomains(days, query))))
+  const recent = (await Promise.all(queries.map((query) => fetchRecentCertificateDomains(Math.max(maxAgeDays, 30), query))))
     .flat()
     .sort((a, b) => b.ts - a.ts);
 
-  const unique = uniqueBy(recent, (item) => item.domain)
-    .map((item) => item.domain)
-    .filter(Boolean)
-    .slice(0, 30);
+  const uniqueRecent = uniqueBy(recent, (item) => item.domain).slice(0, 60);
+  const accepted: string[] = [];
 
-  return unique.length ? unique : FALLBACK_SEEDS;
+  for (const item of uniqueRecent) {
+    const age = await fetchDomainAgeInfo(item.domain);
+    if (age.ageDays !== null && age.ageDays <= maxAgeDays) {
+      accepted.push(item.domain);
+    }
+    if (accepted.length >= 20) break;
+    await sleep(180);
+  }
+
+  return accepted.length ? accepted : FALLBACK_SEEDS;
 }
 
 async function scanStore(domain: string): Promise<{
@@ -176,7 +236,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const scanResult = await DB.prepare(
     "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
-  ).bind(startedAt, domains.length ? `manual domains (${domains.length})` : `certificate window ${days} days`).run();
+  ).bind(startedAt, domains.length ? `manual domains (${domains.length})` : `domain age <= ${days} days`).run();
   const scanId = scanResult.meta.last_row_id;
 
   let storesFound = 0;
@@ -229,7 +289,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return json({
     ok: true,
     scan_id: scanId,
-    scan_mode: domains.length ? "manual_domains" : "certificate_window",
+    scan_mode: domains.length ? "manual_domains" : "domain_age_filter",
     days,
     candidates,
     stores_found: storesFound,
