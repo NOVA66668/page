@@ -6,8 +6,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "store_hunter_db",
-      "database_id": "PUT_YOUR_D1_DATABASE_ID_HERE"
+      "database_name": "mass",
+      "database_id": "8b1e92bc-0b92-49f7-853a-9a7fe3429d53"
     }
   ]
 }
