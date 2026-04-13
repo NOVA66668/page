@@ -111,12 +111,77 @@ export function detectPlatform(html: string): string {
   return "unknown";
 }
 
+function hasPattern(input: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(input));
+}
+
+function countPatternHits(input: string, patterns: RegExp[]): number {
+  let hits = 0;
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match) hits += match.length;
+  }
+  return hits;
+}
+
 export function guessAvailability(html: string): "in_stock" | "sold_out" | "unknown" {
   const low = html.toLowerCase();
-  const soldOutMarkers = ["sold out", "out of stock", "unavailable", "rupture de stock", "نفذ المخزون"];
-  const inStockMarkers = ["in stock", "add to cart", "buy now", "ajouter au panier", "أضف إلى السلة"];
-  if (soldOutMarkers.some(m => low.includes(m))) return "sold_out";
-  if (inStockMarkers.some(m => low.includes(m))) return "in_stock";
+
+  const structuredSoldOut = [
+    /availability[^\n\r]{0,80}(outofstock|soldout|oos)/gi,
+    /"available"\s*:\s*false/gi,
+    /"in_stock"\s*:\s*false/gi,
+    /product:availability[^\n\r]{0,60}out\s*of\s*stock/gi,
+    /inventory_quantity[^\n\r]{0,30}:\s*0/gi
+  ];
+
+  const structuredInStock = [
+    /availability[^\n\r]{0,80}(instock|preorder|limitedavailability)/gi,
+    /"available"\s*:\s*true/gi,
+    /"in_stock"\s*:\s*true/gi,
+    /product:availability[^\n\r]{0,60}in\s*stock/gi,
+    /inventory_quantity[^\n\r]{0,30}:\s*[1-9][0-9]*/gi
+  ];
+
+  if (hasPattern(low, structuredSoldOut)) return "sold_out";
+  if (hasPattern(low, structuredInStock)) return "in_stock";
+
+  const uiSoldOut = [
+    /<button[^>]{0,300}(disabled|aria-disabled=['"]true['"])[^>]*>[\s\S]{0,80}(sold\s*out|out\s*of\s*stock|unavailable|rupture\s*de\s*stock|نفذ\s*المخزون)/gi,
+    /<input[^>]{0,200}value=['"](sold\s*out|out\s*of\s*stock|unavailable)['"][^>]*(disabled)?/gi,
+    /<form[^>]*>[\s\S]{0,600}(sold\s*out|out\s*of\s*stock|currently\s*unavailable)[\s\S]{0,200}<\/form>/gi
+  ];
+
+  const uiInStock = [
+    /<button(?![^>]{0,300}(disabled|aria-disabled=['"]true['"]))[^>]{0,300}>([\s\S]{0,80})(add\s*to\s*cart|buy\s*now|add\s*to\s*bag|ajouter\s*au\s*panier|أضف\s*إلى\s*السلة)/gi,
+    /<form[^>]{0,200}(cart|product-form|add-to-cart)[^>]*>[\s\S]{0,600}(add\s*to\s*cart|buy\s*now|add\s*to\s*bag)/gi,
+    /name=['"]add['"]/gi
+  ];
+
+  if (hasPattern(low, uiSoldOut)) return "sold_out";
+  if (hasPattern(low, uiInStock)) return "in_stock";
+
+  const textSoldOut = [
+    /\bsold\s*out\b/gi,
+    /\bout\s*of\s*stock\b/gi,
+    /\bcurrently\s*unavailable\b/gi,
+    /\brupture\s*de\s*stock\b/gi,
+    /نفذ\s*المخزون/gi,
+    /غير\s*متوفر/gi
+  ];
+
+  const textInStock = [
+    /\bin\s*stock\b/gi,
+    /\bavailable\s*now\b/gi,
+    /\bready\s*to\s*ship\b/gi,
+    /\bships\s*today\b/gi
+  ];
+
+  const soldHits = countPatternHits(low, textSoldOut);
+  const stockHits = countPatternHits(low, textInStock);
+
+  if (soldHits >= 2 && stockHits === 0) return "sold_out";
+  if (stockHits >= 2 && soldHits === 0) return "in_stock";
   return "unknown";
 }
 
