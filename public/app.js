@@ -21,6 +21,12 @@ function productTag(av) {
   return `<span class="tag">Unknown availability</span>`;
 }
 
+function fmtDate(value) {
+  if (!value) return "unknown";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toISOString().slice(0, 10);
+}
+
 async function loadStores() {
   try {
     const res = await fetch("/api/stores");
@@ -36,8 +42,10 @@ async function loadStores() {
       <tr>
         <td><a href="https://${s.domain}" target="_blank" rel="noreferrer">${s.domain}</a><br><small>${s.title || ""}</small></td>
         <td>${s.platform || "unknown"}</td>
-        <td>${s.country_guess || "unknown"}</td>
-        <td>${s.currency_guess || "unknown"}</td>
+        <td>${s.domain_age_days ?? "unknown"}</td>
+        <td>${fmtDate(s.domain_registered_at)}</td>
+        <td>${fmtDate(s.first_product_seen_at)}</td>
+        <td>${s.age_confidence ?? 0}</td>
         <td>${s.products_count ?? 0}</td>
         <td>${s.sold_out_count ?? 0}</td>
         <td>${s.score ?? 0}</td>

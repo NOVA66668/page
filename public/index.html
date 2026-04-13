@@ -35,7 +35,7 @@
           <button id="refreshBtn" class="secondary">Refresh Results</button>
           <button id="clearBtn" class="danger">Clear All Data</button>
         </div>
-        <p class="hint">If the box is empty, discovery uses public candidate domains, then keeps only domains whose RDAP registration age matches the selected limit. Manual domains override the filter.</p>
+        <p class="hint">Empty input uses public candidates, then narrows them with RDAP domain age and first public product/page evidence from crawl indexes. Manual domains override the filter.</p>
       </div>
     </section>
 
@@ -58,8 +58,10 @@
             <tr>
               <th>Store</th>
               <th>Platform</th>
-              <th>Country</th>
-              <th>Currency</th>
+              <th>Domain Age</th>
+              <th>Registered</th>
+              <th>First Product Seen</th>
+              <th>Confidence</th>
               <th>Products</th>
               <th>Sold Out</th>
               <th>Score</th>

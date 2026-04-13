@@ -34,6 +34,11 @@ type DomainAgeInfo = {
   ageDays: number | null;
 };
 
+type FirstSeenInfo = {
+  timestamp: string | null;
+  source: "commoncrawl" | null;
+};
+
 const FALLBACK_SEEDS = [
   "allbirds.com",
   "gymshark.com",
@@ -136,6 +141,64 @@ async function fetchRecentCertificateDomains(days: number, query: string): Promi
   return out;
 }
 
+async function fetchCommonCrawlCollections(): Promise<string[]> {
+  try {
+    const response = await fetch("https://index.commoncrawl.org/collinfo.json", {
+      headers: { "accept": "application/json", "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)" }
+    });
+    if (!response.ok) return [];
+    const items = await response.json();
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((item: any) => String(item?.id || ""))
+      .filter(Boolean)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function ccTimestampToIso(value: string): string | null {
+  if (!/^\d{14}$/.test(value)) return null;
+  const iso = `${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}T${value.slice(8,10)}:${value.slice(10,12)}:${value.slice(12,14)}Z`;
+  return Number.isFinite(Date.parse(iso)) ? iso : null;
+}
+
+async function fetchFirstSeenInCommonCrawl(urls: string[]): Promise<FirstSeenInfo> {
+  const collections = await fetchCommonCrawlCollections();
+  if (!collections.length || !urls.length) return { timestamp: null, source: null };
+
+  let best: string | null = null;
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
+
+  for (const coll of collections) {
+    for (const url of uniqueUrls.slice(0, 8)) {
+      const endpoint = `https://index.commoncrawl.org/${coll}-index?url=${encodeURIComponent(url)}&output=json&fl=timestamp,url&filter=status:200&pageSize=1`;
+      try {
+        const response = await fetch(endpoint, {
+          headers: { "accept": "application/json,text/plain;q=0.9,*/*;q=0.8", "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)" },
+          cache: "no-store"
+        });
+        if (!response.ok) continue;
+        const text = await response.text();
+        const firstLine = text.trim().split(/\r?\n/).find(Boolean);
+        if (!firstLine) continue;
+        const row = JSON.parse(firstLine);
+        const iso = ccTimestampToIso(String(row?.timestamp || ""));
+        if (iso && (!best || iso < best)) {
+          best = iso;
+        }
+      } catch {
+        continue;
+      }
+      await sleep(120);
+    }
+    if (best) break;
+  }
+
+  return { timestamp: best, source: best ? "commoncrawl" : null };
+}
+
 async function discoverCandidates(maxAgeDays: number): Promise<string[]> {
   const queries = [
     "%.myshopify.com",
@@ -172,6 +235,11 @@ async function scanStore(domain: string): Promise<{
   products: Product[];
   sold_out_count: number;
   score: number;
+  domain_registered_at: string | null;
+  domain_age_days: number | null;
+  first_store_seen_at: string | null;
+  first_product_seen_at: string | null;
+  age_confidence: number;
 } | null> {
   const url = `https://${normalizeDomain(domain)}/`;
   const html = await fetchText(url);
@@ -213,6 +281,15 @@ async function scanStore(domain: string): Promise<{
     sold_out_count
   });
 
+  const domainAge = await fetchDomainAgeInfo(domain);
+  const firstStoreSeen = await fetchFirstSeenInCommonCrawl([url]);
+  const firstProductSeen = await fetchFirstSeenInCommonCrawl(uniqueProducts.map((p) => p.url));
+
+  let ageConfidence = 0;
+  if (firstProductSeen.timestamp) ageConfidence += 0.6;
+  if (firstStoreSeen.timestamp) ageConfidence += 0.25;
+  if (domainAge.registeredAt) ageConfidence += 0.15;
+
   return {
     domain: normalizeDomain(domain),
     platform,
@@ -221,13 +298,34 @@ async function scanStore(domain: string): Promise<{
     currency_guess,
     products: uniqueProducts,
     sold_out_count,
-    score
+    score,
+    domain_registered_at: domainAge.registeredAt,
+    domain_age_days: domainAge.ageDays,
+    first_store_seen_at: firstStoreSeen.timestamp,
+    first_product_seen_at: firstProductSeen.timestamp,
+    age_confidence: Number(ageConfidence.toFixed(2))
   };
+}
+
+async function ensureAgeColumns(DB: D1Database): Promise<void> {
+  const statements = [
+    "ALTER TABLE stores ADD COLUMN domain_registered_at TEXT",
+    "ALTER TABLE stores ADD COLUMN domain_age_days INTEGER",
+    "ALTER TABLE stores ADD COLUMN first_store_seen_at TEXT",
+    "ALTER TABLE stores ADD COLUMN first_product_seen_at TEXT",
+    "ALTER TABLE stores ADD COLUMN age_confidence REAL DEFAULT 0"
+  ];
+  for (const sql of statements) {
+    try {
+      await DB.prepare(sql).run();
+    } catch {}
+  }
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const startedAt = new Date().toISOString();
   const { DB } = context.env;
+  await ensureAgeColumns(DB);
 
   const body = await context.request.json().catch(() => ({} as any));
   const days = [7, 15, 30, 365].includes(Number(body?.days)) ? Number(body.days) : 30;
@@ -236,7 +334,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const scanResult = await DB.prepare(
     "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
-  ).bind(startedAt, domains.length ? `manual domains (${domains.length})` : `domain age <= ${days} days`).run();
+  ).bind(startedAt, domains.length ? `manual domains (${domains.length})` : `domain age <= ${days} days + first product seen`).run();
   const scanId = scanResult.meta.last_row_id;
 
   let storesFound = 0;
@@ -250,8 +348,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     productsFound += result.products.length;
 
     await DB.prepare(`
-      INSERT INTO stores (domain, platform, country_guess, currency_guess, title, score, products_count, sold_out_count, last_scan_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO stores (
+        domain, platform, country_guess, currency_guess, title, score, products_count, sold_out_count,
+        last_scan_at, domain_registered_at, domain_age_days, first_store_seen_at, first_product_seen_at, age_confidence
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(domain) DO UPDATE SET
         platform=excluded.platform,
         country_guess=excluded.country_guess,
@@ -260,7 +361,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         score=excluded.score,
         products_count=excluded.products_count,
         sold_out_count=excluded.sold_out_count,
-        last_scan_at=excluded.last_scan_at
+        last_scan_at=excluded.last_scan_at,
+        domain_registered_at=excluded.domain_registered_at,
+        domain_age_days=excluded.domain_age_days,
+        first_store_seen_at=excluded.first_store_seen_at,
+        first_product_seen_at=excluded.first_product_seen_at,
+        age_confidence=excluded.age_confidence
     `).bind(
       result.domain,
       result.platform,
@@ -270,7 +376,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       result.score,
       result.products.length,
       result.sold_out_count,
-      startedAt
+      startedAt,
+      result.domain_registered_at,
+      result.domain_age_days,
+      result.first_store_seen_at,
+      result.first_product_seen_at,
+      result.age_confidence
     ).run();
 
     await DB.prepare("DELETE FROM products WHERE store_domain = ?").bind(result.domain).run();
@@ -289,7 +400,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return json({
     ok: true,
     scan_id: scanId,
-    scan_mode: domains.length ? "manual_domains" : "domain_age_filter",
+    scan_mode: domains.length ? "manual_domains" : "domain_age_plus_first_product_seen",
     days,
     candidates,
     stores_found: storesFound,
