@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "store-hunter-pages",
+  "compatibility_date": "2026-04-13",
+  "pages_build_output_dir": "public",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "store_hunter_db",
+      "database_id": "PUT_YOUR_D1_DATABASE_ID_HERE"
+    }
+  ]
+}

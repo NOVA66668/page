@@ -1,0 +1,15 @@
+{
+  "name": "cloudflare-store-hunter-pages",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1 DB=store_hunter_db",
+    "deploy": "wrangler pages deploy public",
+    "db:create": "wrangler d1 create store_hunter_db",
+    "db:migrate": "wrangler d1 execute store_hunter_db --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.12.0"
+  }
+}

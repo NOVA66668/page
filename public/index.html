@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Store Hunter Cloudflare Demo</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <main class="container">
+    <section class="hero">
+      <span class="badge">Cloudflare Pages + D1 Demo</span>
+      <h1>Find new stores. Track products. Spot sold-out signals.</h1>
+      <p class="lead">
+        A lightweight market-intel dashboard running on Cloudflare Pages Functions with D1 storage.
+        Trigger scans manually, review the top stores, and inspect product availability clues.
+      </p>
+
+      <div class="controls">
+        <textarea id="domains" placeholder="Optional domains, one per line&#10;example.com&#10;shop.example"></textarea>
+        <div class="actions">
+          <button id="scanBtn">Run Scan</button>
+          <button id="refreshBtn" class="secondary">Refresh Results</button>
+        </div>
+        <p class="hint">Leave empty to scan the built-in seed list. This demo uses public storefront data only.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Latest status</h2>
+        <span id="statusPill" class="pill">Idle</span>
+      </div>
+      <pre id="statusBox" class="status-box">Waiting for first request…</pre>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Top stores</h2>
+        <span id="storeCount" class="pill">0 stores</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Store</th>
+              <th>Platform</th>
+              <th>Country</th>
+              <th>Currency</th>
+              <th>Products</th>
+              <th>Sold Out</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="storesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Recent products</h2>
+        <span id="productCount" class="pill">0 products</span>
+      </div>
+      <div id="productsGrid" class="products-grid"></div>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
