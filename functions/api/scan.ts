@@ -212,7 +212,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     ? body.domains.map((d: string) => normalizeDomain(d)).filter(Boolean)
     : [];
 
-  const candidates = manualDomains.length ? manualDomains.slice(0, 20) : await fetchRecentCertificateDomains();
+  const candidates = manualDomains.length ? manualDomains.slice(0, 50) : await fetchRecentCertificateDomains();
 
   const scanResult = await DB.prepare(
     "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
@@ -223,7 +223,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   let productsFound = 0;
   let inspected = 0;
 
-  for (const domain of candidates.slice(0, 40)) {
+  for (const domain of candidates.slice(0, 50)) {
     inspected += 1;
     const homepage = await fetchText(`https://${domain}/`);
     if (!homepage) continue;
