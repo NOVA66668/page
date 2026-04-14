@@ -1,0 +1,176 @@
+export const onRequestGet: PagesFunction = async () => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unified Product Intelligence Dashboard</title>
+  <meta name="description" content="Modern single-workspace dashboard for ranking product candidates and managing product research inside one interface." />
+  <style>
+    :root{--bg:#060b16;--panel:rgba(15,24,46,.78);--line:rgba(255,255,255,.08);--text:#eef4ff;--muted:#9fb0d1;--gold:#ffd36f;--blue:#7ca0ff;--mint:#67efc0;--danger:#ff7e92;--success:#37d39f}
+    *{box-sizing:border-box} html,body{margin:0;padding:0}
+    body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(circle at 5% 0%,rgba(124,160,255,.18),transparent 26%),radial-gradient(circle at 100% 8%,rgba(103,239,192,.14),transparent 24%),linear-gradient(180deg,#0a1223 0%,#050912 100%);color:var(--text)}
+    a{text-decoration:none;color:inherit}.container{max-width:1380px;margin:0 auto;padding:0 18px}.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;gap:18px;position:sticky;top:0;z-index:20;background:rgba(6,11,22,.58);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.04)}.brand{display:flex;align-items:center;gap:12px;font-weight:800}.brand-badge{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--mint));display:grid;place-items:center;color:#04111f;font-weight:900}.nav-links{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.nav-link{font-size:14px;color:var(--muted)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:16px;padding:13px 18px;font-weight:700;cursor:pointer;transition:.24s ease}.btn:hover{transform:translateY(-2px)}.btn-primary{background:linear-gradient(135deg,var(--gold),#ffae45);color:#091423}.btn-secondary{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text)}
+    .hero{padding:34px 0 18px}.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:end}.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:13px;color:#d8e5ff}h1{font-size:clamp(38px,5vw,64px);line-height:1.03;margin:16px 0 12px}.lead{font-size:17px;line-height:1.75;color:var(--muted)}
+    .panel,.metric,.section-card,.summary-box,.result-card{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);border-radius:24px}.panel,.section-card{padding:18px}.metric-grid,.summary-grid,.mini-grid{display:grid;gap:12px}.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.metric{padding:16px}.metric strong,.summary-box strong,.mini-box strong{display:block;font-size:28px;color:var(--gold)}.metric span,.summary-box span,.mini-box span{display:block;color:var(--muted);font-size:13px;margin-top:5px}
+    .layout{display:grid;grid-template-columns:430px 1fr;gap:18px;align-items:start;padding:16px 0 36px}.sticky{position:sticky;top:90px}.field{display:grid;gap:8px;margin-bottom:14px}.field label{font-size:13px;color:#d8e5ff}.field textarea,.field input,.field select{width:100%;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:#091324;color:var(--text);font-size:15px}.field textarea{min-height:230px;resize:vertical}.toolbar{display:flex;gap:10px;flex-wrap:wrap}.helper,.status,.why,.empty-note{color:var(--muted);line-height:1.7}.status{padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);margin-top:14px}.summary-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}.summary-box{padding:14px;text-align:center}
+    .filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.results{display:grid;gap:14px}.result-card{padding:18px;position:relative;overflow:hidden}.result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--danger))}.top-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}.score{display:inline-flex;padding:7px 12px;border-radius:999px;background:rgba(255,211,111,.12);border:1px solid rgba(255,211,111,.24);color:#ffe5aa;font-size:12px;font-weight:800}.rec{display:inline-flex;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800}.rec.buy{background:rgba(55,211,159,.14);border:1px solid rgba(55,211,159,.24);color:#bdf6e1}.rec.watch{background:rgba(124,160,255,.14);border:1px solid rgba(124,160,255,.24);color:#d3e0ff}.rec.reject{background:rgba(255,126,146,.14);border:1px solid rgba(255,126,146,.24);color:#ffd3da}
+    .result-card h3{margin:0 0 6px;font-size:22px}.mini-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0}.mini-box{padding:12px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);text-align:center}.notes{margin-top:8px}.empty{padding:28px;border-radius:22px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);text-align:center;color:var(--muted)}
+    @media (max-width:1100px){.hero-grid,.layout,.metric-grid,.summary-grid,.filter-grid{grid-template-columns:1fr}.sticky{position:static}} @media (max-width:640px){h1{font-size:40px}.mini-grid{grid-template-columns:1fr 1fr}.nav{position:static;flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <div class="brand"><div class="brand-badge">D</div><div>Unified Product Intelligence Dashboard</div></div>
+      <div class="nav-links"><a class="nav-link" href="/">Home</a><a class="nav-link" href="#input">Input</a><a class="nav-link" href="#results">Results</a><a class="btn btn-primary" href="/">Back to Homepage</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="pill">Single workspace • Product ranking engine • Cleaner research flow</div>
+          <h1>Use one dashboard to analyze and rank product ideas properly.</h1>
+          <p class="lead">The weak viral page is no longer the main experience. This dashboard focuses on the stronger engine: paste candidates, analyze them with the translated scoring logic, then search and filter the ranked results inside the same workspace.</p>
+        </div>
+        <div class="panel">
+          <div class="metric-grid">
+            <div class="metric"><strong id="sumCandidates">0</strong><span>Candidates</span></div>
+            <div class="metric"><strong id="sumTest">0</strong><span>TEST NOW</span></div>
+            <div class="metric"><strong id="sumWatch">0</strong><span>WATCHLIST</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="section-card sticky" id="input">
+        <div class="field">
+          <label for="candidateInput">Candidates CSV</label>
+          <textarea id="candidateInput" placeholder="keyword,source,cost,sell_price,estimated_weight_kg,competition_level,problem_solving_score,wow_score,notes\npet hair remover roller,seed,4.2,19.99,0.18,5,9,7,Before/after creative possible\nportable electric cleaning brush,seed,8.5,29.99,0.42,6,8,8,Visual demo strong"></textarea>
+        </div>
+        <div class="toolbar">
+          <button class="btn btn-primary" id="analyzeBtn">Analyze Candidates</button>
+          <button class="btn btn-secondary" id="loadSampleBtn">Load Sample</button>
+        </div>
+        <p class="helper" style="margin-top:14px">Columns supported: keyword, source, cost, sell_price, estimated_weight_kg, competition_level, problem_solving_score, wow_score, notes</p>
+        <div class="summary-grid">
+          <div class="summary-box"><strong id="sumReject">0</strong><span>REJECT</span></div>
+          <div class="summary-box"><strong id="sumBest">—</strong><span>Best score</span></div>
+          <div class="summary-box"><strong id="sumVisible">0</strong><span>Visible results</span></div>
+          <div class="summary-box"><strong id="sumUpdated">--:--</strong><span>Updated</span></div>
+        </div>
+        <div id="rankerStatus" class="status">Ready to rank product candidates.</div>
+      </aside>
+
+      <section id="results">
+        <div class="section-card">
+          <div class="filter-grid">
+            <div class="field"><label for="searchInput">Search results</label><input id="searchInput" type="text" placeholder="Keyword or notes" /></div>
+            <div class="field"><label for="actionFilter">Recommendation</label><select id="actionFilter"><option value="all">All actions</option><option value="TEST NOW">TEST NOW</option><option value="WATCHLIST">WATCHLIST</option><option value="REJECT">REJECT</option></select></div>
+            <div class="field"><label for="scoreFilter">Minimum final score</label><select id="scoreFilter"><option value="0">Any score</option><option value="50">50+</option><option value="60">60+</option><option value="70">70+</option><option value="80">80+</option></select></div>
+          </div>
+          <div id="resultsRoot" class="results"></div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script>
+    let analyses = [];
+    let visible = [];
+    function esc(v){ return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+    function fmtTime(){ return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); }
+    function updateSummary(summary, count, items){
+      document.getElementById('sumCandidates').textContent = count || 0;
+      document.getElementById('sumTest').textContent = summary?.test_now || 0;
+      document.getElementById('sumWatch').textContent = summary?.watchlist || 0;
+      document.getElementById('sumReject').textContent = summary?.reject || 0;
+      document.getElementById('sumBest').textContent = items.length ? Math.max(...items.map(x => x.final_score)) : '—';
+      document.getElementById('sumVisible').textContent = items.length;
+      document.getElementById('sumUpdated').textContent = fmtTime();
+    }
+    function render(items){
+      const root = document.getElementById('resultsRoot');
+      if(!items.length){ root.innerHTML = '<div class="empty">No ranked products match the current filters.</div>'; return; }
+      root.innerHTML = items.map((item, idx) => {
+        const recClass = item.recommended_action === 'TEST NOW' ? 'buy' : item.recommended_action === 'WATCHLIST' ? 'watch' : 'reject';
+        return `<article class="result-card">
+          <div class="top-row"><div><span class="score">#${idx+1} • Final score ${item.final_score}</span></div><span class="rec ${recClass}">${item.recommended_action}</span></div>
+          <h3>${esc(item.keyword)}</h3>
+          <div class="mini-grid">
+            <div class="mini-box"><strong>${item.trend_score}</strong><span>Trend</span></div>
+            <div class="mini-box"><strong>${item.margin_score}</strong><span>Margin</span></div>
+            <div class="mini-box"><strong>${item.shipping_score}</strong><span>Shipping</span></div>
+          </div>
+          <div class="mini-grid">
+            <div class="mini-box"><strong>${item.problem_solving_score}</strong><span>Problem</span></div>
+            <div class="mini-box"><strong>${item.wow_score}</strong><span>Wow</span></div>
+            <div class="mini-box"><strong>${item.competition_score}</strong><span>Competition</span></div>
+          </div>
+          <div class="mini-grid">
+            <div class="mini-box"><strong>${item.policy_score}</strong><span>Policy</span></div>
+            <div class="mini-box"><strong>${item.estimated_margin_pct}%</strong><span>Est. margin</span></div>
+            <div class="mini-box"><strong>${item.trend_growth_pct}%</strong><span>Trend growth</span></div>
+          </div>
+          <div class="why"><strong style="color:#ffe2a0">Why:</strong> ${item.reasons.join(' • ')}</div>
+          ${item.notes ? `<div class="why notes"><strong style="color:#ffe2a0">Notes:</strong> ${esc(item.notes)}</div>` : ''}
+        </article>`;
+      }).join('');
+    }
+    function applyFilters(){
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const action = document.getElementById('actionFilter').value;
+      const minScore = Number(document.getElementById('scoreFilter').value || 0);
+      visible = analyses.filter(item => {
+        const okQ = !q || item.keyword.toLowerCase().includes(q) || (item.notes || '').toLowerCase().includes(q);
+        const okAction = action === 'all' || item.recommended_action === action;
+        const okScore = item.final_score >= minScore;
+        return okQ && okAction && okScore;
+      });
+      document.getElementById('sumVisible').textContent = visible.length;
+      render(visible);
+    }
+    async function loadSample(){
+      const status = document.getElementById('rankerStatus');
+      status.textContent = 'Loading sample candidates...';
+      try {
+        const response = await fetch('/api/product-ranker');
+        const data = await response.json();
+        const csv = ['keyword,source,cost,sell_price,estimated_weight_kg,competition_level,problem_solving_score,wow_score,notes', ...(data.candidates || []).map(c => [c.keyword,c.source||'manual',c.cost??'',c.sell_price??'',c.estimated_weight_kg??'',c.competition_level??'',c.problem_solving_score??'',c.wow_score??'',c.notes||''].join(','))].join('\n');
+        document.getElementById('candidateInput').value = csv;
+        analyses = data.analyses || [];
+        updateSummary({ test_now: analyses.filter(x => x.recommended_action === 'TEST NOW').length, watchlist: analyses.filter(x => x.recommended_action === 'WATCHLIST').length, reject: analyses.filter(x => x.recommended_action === 'REJECT').length }, analyses.length, analyses);
+        applyFilters();
+        status.textContent = 'Loaded sample candidates and ranked them successfully.';
+      } catch (e) {
+        status.textContent = 'Could not load sample candidates.';
+      }
+    }
+    async function analyze(){
+      const status = document.getElementById('rankerStatus');
+      status.textContent = 'Analyzing candidates...';
+      try {
+        const csv = document.getElementById('candidateInput').value;
+        const response = await fetch('/api/product-ranker', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ csv }) });
+        const data = await response.json();
+        analyses = data.analyses || [];
+        updateSummary(data.summary, data.candidate_count, analyses);
+        applyFilters();
+        status.textContent = 'Ranking complete. ' + data.candidate_count + ' candidates processed.';
+      } catch (e) {
+        status.textContent = 'Could not rank the candidates right now.';
+      }
+    }
+    document.getElementById('analyzeBtn').addEventListener('click', analyze);
+    document.getElementById('loadSampleBtn').addEventListener('click', loadSample);
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('actionFilter').addEventListener('change', applyFilters);
+    document.getElementById('scoreFilter').addEventListener('change', applyFilters);
+    loadSample();
+  </script>
+</body>
+</html>`;
+  return new Response(html, { headers: { 'content-type': 'text/html; charset=UTF-8', 'cache-control': 'no-store' } });
+};
