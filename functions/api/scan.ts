@@ -7,6 +7,7 @@ import {
   extractTitle,
   fetchText,
   uniqueBy,
+  scoreStore,
   type Env
 } from "./_utils";
 
@@ -39,6 +40,21 @@ type ProductRow = {
   published_at: string | null;
   updated_at: string | null;
 };
+
+const FALLBACK_SEEDS = [
+  "colourpop.com",
+  "allbirds.com",
+  "fashionnova.com",
+  "morphe.com",
+  "gymshark.com",
+  "khadijabeauty.ma",
+  "myprotein.com",
+  "uk.tentree.com",
+  "blendjet.com",
+  "ridge.com",
+  "alo-yoga.com",
+  "bombas.com"
+];
 
 function toTimestamp(value?: string | null): number {
   if (!value) return 0;
@@ -83,7 +99,7 @@ async function fetchRecentCertificateDomains(): Promise<string[]> {
   }
 
   return uniqueBy(
-    found.sort((a, b) => b.ts - a.ts).slice(0, 120),
+    found.sort((a, b) => b.ts - a.ts).slice(0, 150),
     (item) => item.domain
   ).map((item) => item.domain);
 }
@@ -151,18 +167,13 @@ function mapProducts(domain: string, rawProducts: ShopifyProduct[], currencyGues
   return out;
 }
 
-function classifyRecentProducts(products: ProductRow[], days: number): {
-  recentProducts: ProductRow[];
-  firstRecentProductAt: string | null;
-  lastProductUpdatedAt: string | null;
-  approximateFirstProductAt: string | null;
-} {
+function classifyRecentProducts(products: ProductRow[], days: number) {
   const recentProducts = products.filter((p) =>
     isRecent(p.created_at, days) || isRecent(p.published_at, days) || isRecent(p.updated_at, days)
   );
 
   const firstRecentProductAt = recentProducts
-    .flatMap((p) => [p.created_at, p.published_at].filter(Boolean) as string[])
+    .flatMap((p) => [p.created_at, p.published_at, p.updated_at].filter(Boolean) as string[])
     .sort()[0] || null;
 
   const lastProductUpdatedAt = recentProducts
@@ -201,45 +212,50 @@ async function ensureColumns(DB: D1Database): Promise<void> {
   }
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const startedAt = new Date().toISOString();
-  const { DB } = context.env;
-  await ensureColumns(DB);
-
-  const body = await context.request.json().catch(() => ({} as any));
-  const days = [7, 15, 30, 365].includes(Number(body?.days)) ? Number(body.days) : 30;
-  const manualDomains = Array.isArray(body?.domains)
-    ? body.domains.map((d: string) => normalizeDomain(d)).filter(Boolean)
-    : [];
-
-  const candidates = manualDomains.length ? manualDomains.slice(0, 50) : await fetchRecentCertificateDomains();
-
-  const scanResult = await DB.prepare(
-    "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
-  ).bind(startedAt, manualDomains.length ? `manual domains (${manualDomains.length})` : `shopify recent products <= ${days} days`).run();
-  const scanId = scanResult.meta.last_row_id;
-
+async function runCandidateBatch(params: {
+  DB: D1Database;
+  candidates: string[];
+  days: number;
+  startedAt: string;
+  discoveryMethod: string;
+  diagnostics: Record<string, number>;
+}) {
+  const { DB, candidates, days, startedAt, discoveryMethod, diagnostics } = params;
   let storesFound = 0;
   let productsFound = 0;
-  let inspected = 0;
 
   for (const domain of candidates.slice(0, 50)) {
-    inspected += 1;
+    diagnostics.inspected += 1;
     const homepage = await fetchText(`https://${domain}/`);
-    if (!homepage) continue;
+    if (!homepage) {
+      diagnostics.homepage_failed += 1;
+      continue;
+    }
 
     const platform = detectPlatform(homepage);
-    if (platform !== "shopify") continue;
+    if (platform !== "shopify") {
+      diagnostics.not_shopify += 1;
+      continue;
+    }
+    diagnostics.shopify_detected += 1;
 
     const title = extractTitle(homepage, domain);
     const countryGuess = guessCountryFromDomain(domain);
     const currencyGuess = detectCurrency(homepage);
     const rawProducts = await fetchShopifyProducts(domain);
-    if (!rawProducts.length) continue;
+    if (!rawProducts.length) {
+      diagnostics.feed_missing += 1;
+      continue;
+    }
+    diagnostics.feed_ok += 1;
 
     const allProducts = mapProducts(domain, rawProducts, currencyGuess);
     const { recentProducts, firstRecentProductAt, lastProductUpdatedAt, approximateFirstProductAt } = classifyRecentProducts(allProducts, days);
-    if (!recentProducts.length) continue;
+    if (!recentProducts.length) {
+      diagnostics.no_recent_products += 1;
+      continue;
+    }
+    diagnostics.recent_matches += 1;
 
     const score = scoreStore({
       platform,
@@ -287,7 +303,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       firstRecentProductAt,
       lastProductUpdatedAt,
       approximateFirstProductAt,
-      manualDomains.length ? "manual" : "crt.sh -> shopify products.json"
+      discoveryMethod
     ).run();
 
     await DB.prepare("DELETE FROM products WHERE store_domain = ?").bind(domain).run();
@@ -312,18 +328,83 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
+  return { storesFound, productsFound };
+}
+
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  const startedAt = new Date().toISOString();
+  const { DB } = context.env;
+  await ensureColumns(DB);
+
+  const body = await context.request.json().catch(() => ({} as any));
+  const days = [7, 15, 30, 365].includes(Number(body?.days)) ? Number(body.days) : 30;
+  const manualDomains = Array.isArray(body?.domains)
+    ? body.domains.map((d: string) => normalizeDomain(d)).filter(Boolean)
+    : [];
+
+  const primaryCandidates = manualDomains.length ? manualDomains.slice(0, 50) : await fetchRecentCertificateDomains();
+
+  const scanResult = await DB.prepare(
+    "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
+  ).bind(startedAt, manualDomains.length ? `manual domains (${manualDomains.length})` : `shopify recent products <= ${days} days`).run();
+  const scanId = scanResult.meta.last_row_id;
+
+  const diagnostics: Record<string, number> = {
+    inspected: 0,
+    homepage_failed: 0,
+    not_shopify: 0,
+    shopify_detected: 0,
+    feed_missing: 0,
+    feed_ok: 0,
+    no_recent_products: 0,
+    recent_matches: 0,
+    fallback_used: 0
+  };
+
+  let totalStoresFound = 0;
+  let totalProductsFound = 0;
+
+  const primary = await runCandidateBatch({
+    DB,
+    candidates: primaryCandidates,
+    days,
+    startedAt,
+    discoveryMethod: manualDomains.length ? "manual" : "crt.sh -> shopify products.json",
+    diagnostics
+  });
+
+  totalStoresFound += primary.storesFound;
+  totalProductsFound += primary.productsFound;
+
+  if (!manualDomains.length && totalStoresFound === 0) {
+    diagnostics.fallback_used = 1;
+    const fallback = await runCandidateBatch({
+      DB,
+      candidates: FALLBACK_SEEDS,
+      days,
+      startedAt,
+      discoveryMethod: "fallback seeds -> shopify products.json",
+      diagnostics
+    });
+    totalStoresFound += fallback.storesFound;
+    totalProductsFound += fallback.productsFound;
+  }
+
   await DB.prepare(
     "UPDATE scans SET finished_at = ?, stores_found = ?, products_found = ?, status = 'completed' WHERE id = ?"
-  ).bind(new Date().toISOString(), storesFound, productsFound, scanId).run();
+  ).bind(new Date().toISOString(), totalStoresFound, totalProductsFound, scanId).run();
 
   return json({
     ok: true,
     scan_id: scanId,
     scan_mode: manualDomains.length ? "manual_domains" : "shopify_recent_products",
     days,
-    candidates_inspected: inspected,
-    candidates,
-    stores_found: storesFound,
-    products_found: productsFound
+    primary_candidates: primaryCandidates,
+    stores_found: totalStoresFound,
+    products_found: totalProductsFound,
+    diagnostics,
+    hint: totalStoresFound === 0
+      ? "No matching Shopify stores were found in this window. Check diagnostics: not_shopify, feed_missing, and no_recent_products."
+      : "Scan completed with matching stores."
   });
 };
