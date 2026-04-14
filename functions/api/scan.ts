@@ -41,21 +41,6 @@ type ProductRow = {
   updated_at: string | null;
 };
 
-const FALLBACK_SEEDS = [
-  "colourpop.com",
-  "allbirds.com",
-  "fashionnova.com",
-  "morphe.com",
-  "gymshark.com",
-  "khadijabeauty.ma",
-  "myprotein.com",
-  "uk.tentree.com",
-  "blendjet.com",
-  "ridge.com",
-  "alo-yoga.com",
-  "bombas.com"
-];
-
 function toTimestamp(value?: string | null): number {
   if (!value) return 0;
   const ts = Date.parse(value);
@@ -67,39 +52,35 @@ function normalizeCrtDomain(value: string): string {
 }
 
 async function fetchRecentCertificateDomains(): Promise<string[]> {
-  const queries = ["%.myshopify.com", "%.shop", "%.store", "%.boutique"];
-  const cutoff = Date.now() - 45 * 24 * 60 * 60 * 1000;
+  const url = `https://crt.sh/?q=${encodeURIComponent("%.myshopify.com")}&output=json`;
+  const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
+  const text = await fetchText(url);
+  if (!text) return [];
+
+  let rows: CrtShRow[] = [];
+  try {
+    rows = JSON.parse(text);
+  } catch {
+    return [];
+  }
+
   const found: Array<{ domain: string; ts: number }> = [];
-
-  for (const query of queries) {
-    const url = `https://crt.sh/?q=${encodeURIComponent(query)}&output=json`;
-    const text = await fetchText(url);
-    if (!text) continue;
-
-    let rows: CrtShRow[] = [];
-    try {
-      rows = JSON.parse(text);
-    } catch {
-      continue;
-    }
-
-    for (const row of rows) {
-      const ts = Math.max(toTimestamp(row.entry_timestamp), toTimestamp(row.not_before));
-      if (!ts || ts < cutoff) continue;
-      for (const source of [row.common_name, row.name_value]) {
-        if (!source) continue;
-        for (const raw of source.split(/\r?\n/)) {
-          const domain = normalizeCrtDomain(raw);
-          if (!domain || domain.includes("*")) continue;
-          if (domain.endsWith(".local") || domain.endsWith(".invalid")) continue;
-          found.push({ domain, ts });
-        }
+  for (const row of rows) {
+    const ts = Math.max(toTimestamp(row.entry_timestamp), toTimestamp(row.not_before));
+    if (!ts || ts < cutoff) continue;
+    for (const source of [row.common_name, row.name_value]) {
+      if (!source) continue;
+      for (const raw of source.split(/\r?\n/)) {
+        const domain = normalizeCrtDomain(raw);
+        if (!domain || domain.includes("*")) continue;
+        if (!domain.endsWith(".myshopify.com")) continue;
+        found.push({ domain, ts });
       }
     }
   }
 
   return uniqueBy(
-    found.sort((a, b) => b.ts - a.ts).slice(0, 150),
+    found.sort((a, b) => b.ts - a.ts).slice(0, 300),
     (item) => item.domain
   ).map((item) => item.domain);
 }
@@ -114,7 +95,7 @@ async function fetchShopifyProducts(domain: string): Promise<ShopifyProduct[]> {
     try {
       const response = await fetch(endpoint, {
         headers: {
-          "accept": "application/json,text/plain;q=0.9,*/*;q=0.8",
+          accept: "application/json,text/plain;q=0.9,*/*;q=0.8",
           "user-agent": "Mozilla/5.0 (compatible; StoreHunterDemo/1.0)"
         },
         cache: "no-store"
@@ -167,13 +148,16 @@ function mapProducts(domain: string, rawProducts: ShopifyProduct[], currencyGues
   return out;
 }
 
+function getNewnessDate(product: ProductRow): string | null {
+  return product.created_at || product.published_at || null;
+}
+
 function classifyRecentProducts(products: ProductRow[], days: number) {
-  const recentProducts = products.filter((p) =>
-    isRecent(p.created_at, days) || isRecent(p.published_at, days) || isRecent(p.updated_at, days)
-  );
+  const recentProducts = products.filter((p) => isRecent(getNewnessDate(p), days));
 
   const firstRecentProductAt = recentProducts
-    .flatMap((p) => [p.created_at, p.published_at, p.updated_at].filter(Boolean) as string[])
+    .map((p) => getNewnessDate(p))
+    .filter(Boolean)
     .sort()[0] || null;
 
   const lastProductUpdatedAt = recentProducts
@@ -183,7 +167,8 @@ function classifyRecentProducts(products: ProductRow[], days: number) {
     .reverse()[0] || null;
 
   const approximateFirstProductAt = products
-    .flatMap((p) => [p.created_at, p.published_at].filter(Boolean) as string[])
+    .map((p) => getNewnessDate(p))
+    .filter(Boolean)
     .sort()[0] || null;
 
   return {
@@ -346,7 +331,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const scanResult = await DB.prepare(
     "INSERT INTO scans (started_at, status, note) VALUES (?, 'running', ?)"
-  ).bind(startedAt, manualDomains.length ? `manual domains (${manualDomains.length})` : `shopify recent products <= ${days} days`).run();
+  ).bind(startedAt, manualDomains.length ? `manual domains (${manualDomains.length})` : `myshopify recent created products <= ${days} days`).run();
   const scanId = scanResult.meta.last_row_id;
 
   const diagnostics: Record<string, number> = {
@@ -361,50 +346,30 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     fallback_used: 0
   };
 
-  let totalStoresFound = 0;
-  let totalProductsFound = 0;
-
   const primary = await runCandidateBatch({
     DB,
     candidates: primaryCandidates,
     days,
     startedAt,
-    discoveryMethod: manualDomains.length ? "manual" : "crt.sh -> shopify products.json",
+    discoveryMethod: manualDomains.length ? "manual" : "crt.sh myshopify -> products.json created_at",
     diagnostics
   });
 
-  totalStoresFound += primary.storesFound;
-  totalProductsFound += primary.productsFound;
-
-  if (!manualDomains.length && totalStoresFound === 0) {
-    diagnostics.fallback_used = 1;
-    const fallback = await runCandidateBatch({
-      DB,
-      candidates: FALLBACK_SEEDS,
-      days,
-      startedAt,
-      discoveryMethod: "fallback seeds -> shopify products.json",
-      diagnostics
-    });
-    totalStoresFound += fallback.storesFound;
-    totalProductsFound += fallback.productsFound;
-  }
-
   await DB.prepare(
     "UPDATE scans SET finished_at = ?, stores_found = ?, products_found = ?, status = 'completed' WHERE id = ?"
-  ).bind(new Date().toISOString(), totalStoresFound, totalProductsFound, scanId).run();
+  ).bind(new Date().toISOString(), primary.storesFound, primary.productsFound, scanId).run();
 
   return json({
     ok: true,
     scan_id: scanId,
-    scan_mode: manualDomains.length ? "manual_domains" : "shopify_recent_products",
+    scan_mode: manualDomains.length ? "manual_domains" : "myshopify_recent_created_products",
     days,
     primary_candidates: primaryCandidates,
-    stores_found: totalStoresFound,
-    products_found: totalProductsFound,
+    stores_found: primary.storesFound,
+    products_found: primary.productsFound,
     diagnostics,
-    hint: totalStoresFound === 0
-      ? "No matching Shopify stores were found in this window. Check diagnostics: not_shopify, feed_missing, and no_recent_products."
+    hint: primary.storesFound === 0
+      ? "No matching stores were found. The scan now trusts created_at first and published_at only as fallback, and ignores updated_at for product newness."
       : "Scan completed with matching stores."
   });
 };
