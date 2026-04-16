@@ -2,6 +2,94 @@
    NexaStudio — Agency Website JS
    ============================================================ */
 
+/* ============================================================
+   TRANSLATIONS  AR / FR
+   ============================================================ */
+const T = {
+  ar: {
+    'nav.services':'الخدمات','nav.tools':'أدواتنا','nav.pricing':'الباقات',
+    'nav.testi':'آراء العملاء','nav.cta':'احصل على عرض مجاني',
+    'hero.badge':'وكالة رقمية رائدة في المغرب',
+    'hero.title1':'نبني','hero.title2':'حضورك الرقمي','hero.title3':'بأحدث التقنيات',
+    'hero.sub':'من المواقع الاحترافية مع لوحة التحكم إلى المتاجر الإلكترونية وحلول الإيميل ماركتينغ — نصمم كل ما يحتاجه عملك للنجاح.',
+    'hero.cta1':'ابدأ مشروعك الآن','hero.cta2':'اكتشف خدماتنا',
+    'hero.stat1':'مشروع منجز','hero.stat2':'رضا العملاء','hero.stat3':'سنوات خبرة',
+    'tools.tag':'تقنياتنا','tools.title':'أدوات وتقنيات نبني بها مواقعك',
+    'tools.sub':'نستخدم أحدث المنصات والأدوات لضمان موقع سريع وآمن وقابل للتطوير',
+    'tool.wp':'WordPress','tool.wc':'WooCommerce','tool.sh':'Shopify',
+    'tool.ga':'Google Ads','tool.fb':'Facebook Ads','tool.mc':'Mailchimp',
+    'tool.wa':'WhatsApp API','tool.an':'Google Analytics','tool.re':'React / Next.js',
+    'tool.js':'JavaScript','tool.dk':'Docker / Cloud','tool.cf':'Cloudflare',
+    'pkg.tag':'الباقات','pkg.title':'اختر الباقة المناسبة لعملك',
+    'pkg.sub':'كل باقة مخصصة — أخبرنا عن مشروعك وسنقترح الأنسب لك',
+    'pkg.popular':'الأكثر طلباً','pkg.cta':'احصل على عرض',
+    'pkg.note':'* عرض مخصص مجاني حسب احتياجات مشروعك — تواصل معنا الآن',
+    'pkg1.name':'الأساسية','pkg1.desc':'مثالية للأعمال الناشئة والمحلات الصغيرة',
+    'pkg1.f1':'✓ موقع 5 صفحات','pkg1.f2':'✓ تصميم متجاوب','pkg1.f3':'✓ SSL مجاني',
+    'pkg1.f4':'✓ نموذج تواصل','pkg1.f5':'✓ تحسين SEO أساسي','pkg1.f6':'✗ لوحة تحكم CMS','pkg1.f7':'✗ إيميل ماركتينغ',
+    'pkg2.name':'الاحترافية','pkg2.desc':'للأعمال المتوسطة والنامية',
+    'pkg2.f1':'✓ صفحات غير محدودة','pkg2.f2':'✓ لوحة تحكم CMS كاملة',
+    'pkg2.f3':'✓ إيميل ماركتينغ أساسي','pkg2.f4':'✓ ربط السوشيال ميديا',
+    'pkg2.f5':'✓ تحسين SEO متقدم','pkg2.f6':'✓ تقارير تحليلية','pkg2.f7':'✗ متجر إلكتروني',
+    'pkg3.name':'المتكاملة','pkg3.desc':'للمتاجر والأعمال الكبيرة',
+    'pkg3.f1':'✓ كل ما في الاحترافية','pkg3.f2':'✓ متجر إلكتروني كامل',
+    'pkg3.f3':'✓ إدارة المخزون','pkg3.f4':'✓ بوابات دفع متعددة',
+    'pkg3.f5':'✓ إيميل ماركتينغ متقدم','pkg3.f6':'✓ مراقبة المنافسين','pkg3.f7':'✓ دعم تقني 6 أشهر',
+    'form.budgetPh':'اختر ميزانيتك',
+  },
+  fr: {
+    'nav.services':'Services','nav.tools':'Nos Outils','nav.pricing':'Formules',
+    'nav.testi':'Avis Clients','nav.cta':'Devis Gratuit',
+    'hero.badge':'Agence digitale leader au Maroc',
+    'hero.title1':'Nous construisons','hero.title2':'votre présence digitale','hero.title3':'avec les dernières technologies',
+    'hero.sub':'Des sites professionnels avec CMS aux boutiques en ligne et solutions d\'emailing — nous créons tout ce dont votre entreprise a besoin.',
+    'hero.cta1':'Démarrez votre projet','hero.cta2':'Découvrir nos services',
+    'hero.stat1':'projets réalisés','hero.stat2':'satisfaction client','hero.stat3':'années d\'expérience',
+    'tools.tag':'Nos Technologies','tools.title':'Outils & technologies que nous utilisons',
+    'tools.sub':'Nous utilisons les meilleures plateformes pour un site rapide, sécurisé et évolutif',
+    'tool.wp':'WordPress','tool.wc':'WooCommerce','tool.sh':'Shopify',
+    'tool.ga':'Google Ads','tool.fb':'Facebook Ads','tool.mc':'Mailchimp',
+    'tool.wa':'WhatsApp API','tool.an':'Google Analytics','tool.re':'React / Next.js',
+    'tool.js':'JavaScript','tool.dk':'Docker / Cloud','tool.cf':'Cloudflare',
+    'pkg.tag':'Formules','pkg.title':'Choisissez la formule adaptée',
+    'pkg.sub':'Chaque projet est unique — contactez-nous pour un devis personnalisé',
+    'pkg.popular':'La plus demandée','pkg.cta':'Obtenir un devis',
+    'pkg.note':'* Devis personnalisé gratuit selon vos besoins — contactez-nous',
+    'pkg1.name':'Essentielle','pkg1.desc':'Idéale pour les petites entreprises',
+    'pkg1.f1':'✓ Site 5 pages','pkg1.f2':'✓ Design responsive','pkg1.f3':'✓ SSL gratuit',
+    'pkg1.f4':'✓ Formulaire de contact','pkg1.f5':'✓ SEO de base','pkg1.f6':'✗ CMS / Back-office','pkg1.f7':'✗ Email marketing',
+    'pkg2.name':'Professionnelle','pkg2.desc':'Pour les entreprises en croissance',
+    'pkg2.f1':'✓ Pages illimitées','pkg2.f2':'✓ CMS complet',
+    'pkg2.f3':'✓ Email marketing','pkg2.f4':'✓ Intégration réseaux sociaux',
+    'pkg2.f5':'✓ SEO avancé','pkg2.f6':'✓ Rapports analytiques','pkg2.f7':'✗ Boutique en ligne',
+    'pkg3.name':'Intégrale','pkg3.desc':'Pour les boutiques et grandes entreprises',
+    'pkg3.f1':'✓ Tout de la Pro','pkg3.f2':'✓ Boutique en ligne complète',
+    'pkg3.f3':'✓ Gestion des stocks','pkg3.f4':'✓ Paiement multi-devises',
+    'pkg3.f5':'✓ Email marketing avancé','pkg3.f6':'✓ Veille concurrentielle','pkg3.f7':'✓ Support technique 6 mois',
+    'form.budgetPh':'Choisissez votre budget',
+  }
+};
+
+let currentLang = 'ar';
+
+function applyLang(lang) {
+  currentLang = lang;
+  const isAr = lang === 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (T[lang] && T[lang][key]) el.textContent = T[lang][key];
+  });
+
+  document.getElementById('btnAr').classList.toggle('active', isAr);
+  document.getElementById('btnFr').classList.toggle('active', !isAr);
+}
+
+document.getElementById('btnAr').addEventListener('click', () => applyLang('ar'));
+document.getElementById('btnFr').addEventListener('click', () => applyLang('fr'));
+
 /* ---------- Navbar scroll effect ---------- */
 const navbar = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
