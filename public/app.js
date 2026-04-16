@@ -205,6 +205,32 @@ if (form) {
 }
 
 /* ---------- Stagger reveal for grids ---------- */
-document.querySelectorAll('.services-grid .svc-card, .testi-grid .testi-card, .portfolio-grid .port-card').forEach((el, i) => {
+document.querySelectorAll('.services-grid .svc-card, .testi-grid .testi-card, .portfolio-grid-new .pcard').forEach((el, i) => {
   el.style.transitionDelay = `${i * 0.08}s`;
+});
+
+/* ---------- Portfolio filter ---------- */
+const pfBtns  = document.querySelectorAll('.pf-btn');
+const pCards  = document.querySelectorAll('.pcard');
+
+pfBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    pfBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const filter = btn.dataset.filter;
+    pCards.forEach(card => {
+      const match = filter === 'all' || card.dataset.cat === filter;
+      card.style.display = match ? '' : 'none';
+      if (match) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        requestAnimationFrame(() => {
+          card.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        });
+      }
+    });
+  });
 });
