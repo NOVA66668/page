@@ -1,125 +1,650 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shopify Deep Hunter</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexaStudio | وكالة تطوير المواقع الاحترافية بالمغرب</title>
+  <meta name="description" content="NexaStudio وكالة رقمية متكاملة لإنشاء المواقع والمتاجر الإلكترونية والإيميل ماركتينغ وإدارة الإعلانات في المغرب" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="bg"></div>
-  <main class="container">
-    <section class="hero">
-      <span class="badge">Cloudflare Pages + D1</span>
-      <h1>Shopify Deep Hunter Dashboard</h1>
-      <p class="lead">
-        Run scans, inspect candidate stores, review recent products, and keep scan history directly inside the site.
-        No Telegram, only a focused internal dashboard.
-      </p>
 
-      <div class="controls">
-        <div class="toolbar">
-          <div class="field-group compact">
-            <label for="daysFilter">Recent product window</label>
-            <select id="daysFilter">
-              <option value="7">Last 7 days</option>
-              <option value="15">Last 15 days</option>
-              <option value="30" selected>Last 30 days</option>
-              <option value="365">Last 365 days</option>
-            </select>
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="url(#g1)"/><defs><linearGradient id="g1" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs></svg>
+        <span>Nexa<strong>Studio</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#services" data-i18n="nav.services">الخدمات</a></li>
+        <li><a href="#tools"    data-i18n="nav.tools">أدواتنا</a></li>
+        <li><a href="#pricing"  data-i18n="nav.pricing">الباقات</a></li>
+        <li><a href="#testimonials" data-i18n="nav.testi">آراء العملاء</a></li>
+        <li><a href="#contact" class="nav-cta" data-i18n="nav.cta">احصل على عرض مجاني</a></li>
+      </ul>
+      <div class="lang-switcher">
+        <button class="lang-btn active" id="btnAr">AR</button>
+        <button class="lang-btn"        id="btnFr">FR</button>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="القائمة">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+      <div class="grid-overlay"></div>
+    </div>
+    <div class="container hero-inner">
+      <div class="hero-text" data-aos="fade-up">
+        <div class="badge">
+          <span class="badge-pulse"></span>
+          <span data-i18n="hero.badge">وكالة رقمية رائدة في المغرب</span>
+        </div>
+        <h1><span data-i18n="hero.title1">نبني</span> <span class="grad-text" data-i18n="hero.title2">حضورك الرقمي</span><br><span data-i18n="hero.title3">بأحدث التقنيات</span></h1>
+        <p class="hero-sub" data-i18n="hero.sub">
+          من المواقع الاحترافية مع لوحة التحكم إلى المتاجر الإلكترونية وحلول الإيميل ماركتينغ —
+          نصمم كل ما يحتاجه عملك للنجاح.
+        </p>
+        <div class="hero-btns">
+          <a href="#contact" class="btn-primary"><span data-i18n="hero.cta1">ابدأ مشروعك الآن</span> <span class="btn-arrow">←</span></a>
+          <a href="#tools" class="btn-ghost" data-i18n="hero.cta2">اكتشف خدماتنا</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hstat">
+            <strong><span class="counter" data-to="150">0</span>+</strong>
+            <span data-i18n="hero.stat1">مشروع منجز</span>
+          </div>
+          <div class="hstat-div"></div>
+          <div class="hstat">
+            <strong><span class="counter" data-to="98">0</span>%</strong>
+            <span data-i18n="hero.stat2">رضا العملاء</span>
+          </div>
+          <div class="hstat-div"></div>
+          <div class="hstat">
+            <strong><span class="counter" data-to="5">0</span></strong>
+            <span data-i18n="hero.stat3">سنوات خبرة</span>
           </div>
         </div>
-        <textarea id="domains" placeholder="Optional manual domains, one per line&#10;store-one.myshopify.com&#10;store-two.com"></textarea>
-        <div class="actions">
-          <button id="scanBtn">Run Deep Scan</button>
-          <button id="refreshBtn" class="secondary">Refresh Data</button>
-          <button id="clearBtn" class="danger">Clear All Data</button>
-        </div>
-        <p class="hint">Leave manual domains empty to use auto discovery. Click a store row to inspect its full details.</p>
       </div>
-    </section>
-
-    <section class="stats-grid">
-      <article class="stat-card">
-        <span class="stat-label">Visible Stores</span>
-        <strong id="storesMetric">0</strong>
-        <small>Stores loaded in the dashboard</small>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">Recent Products</span>
-        <strong id="productsMetric">0</strong>
-        <small>Products attached to current stores</small>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">Scan Runs</span>
-        <strong id="scansMetric">0</strong>
-        <small>Recent scan history entries</small>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">Top Opportunity</span>
-        <strong id="topMetric">—</strong>
-        <small>Highest score currently shown</small>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Latest status</h2>
-        <span id="statusPill" class="pill">Idle</span>
+      <div class="hero-visual" data-aos="fade-left">
+        <div class="browser-mock">
+          <div class="bmock-bar">
+            <span class="bmock-dot red"></span>
+            <span class="bmock-dot yellow"></span>
+            <span class="bmock-dot green"></span>
+            <span class="bmock-url">nexastudio.ma</span>
+          </div>
+          <div class="bmock-body">
+            <div class="bmock-nav"></div>
+            <div class="bmock-hero-area">
+              <div class="bmock-title"></div>
+              <div class="bmock-subtitle"></div>
+              <div class="bmock-btn"></div>
+            </div>
+            <div class="bmock-cards">
+              <div class="bmock-card c1"></div>
+              <div class="bmock-card c2"></div>
+              <div class="bmock-card c3"></div>
+            </div>
+          </div>
+        </div>
+        <div class="float-badge fb1">
+          <span>🛒</span>
+          <div><b>متجر إلكتروني</b><small>إدارة المخزون</small></div>
+        </div>
+        <div class="float-badge fb2">
+          <span>📧</span>
+          <div><b>إيميل ماركتينغ</b><small>حملات تلقائية</small></div>
+        </div>
+        <div class="float-badge fb3">
+          <span>📊</span>
+          <div><b>مراقبة المنافسين</b><small>تحليل السوق</small></div>
+        </div>
       </div>
-      <pre id="statusBox" class="status-box">Waiting for first request…</pre>
-    </section>
+    </div>
+  </section>
 
-    <section class="dashboard-grid">
-      <section class="panel span-2">
-        <div class="panel-header">
-          <h2>Opportunity board</h2>
-          <span id="storeCount" class="pill">0 stores</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Store</th>
-                <th>Recent Products</th>
-                <th>First Recent</th>
-                <th>Approx First</th>
-                <th>Country</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody id="storesBody"></tbody>
-          </table>
-        </div>
-      </section>
+  <!-- ===== SERVICES ===== -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-tag" data-i18n="svc.tag">خدماتنا</span>
+        <h2 data-i18n="svc.title">حلول رقمية لكل نوع عمل</h2>
+        <p data-i18n="svc.sub">نقدم باقة متكاملة من الخدمات الرقمية المصممة لتنمية عملك</p>
+      </div>
+      <div class="services-grid">
 
-      <section class="panel sticky-panel">
-        <div class="panel-header">
-          <h2>Store details</h2>
-          <span id="detailPill" class="pill">No selection</span>
+        <div class="svc-card featured-svc">
+          <div class="svc-glow"></div>
+          <div class="svc-icon">🌐</div>
+          <h3 data-i18n="s1.h">موقع مع لوحة تحكم</h3>
+          <p data-i18n="s1.p">موقع احترافي كامل مع CMS سهل الاستخدام تدير به المحتوى بدون أي خبرة تقنية</p>
+          <ul>
+            <li data-i18n="s1.l1">تصميم عصري ومتجاوب</li>
+            <li data-i18n="s1.l2">لوحة تحكم بالعربية</li>
+            <li data-i18n="s1.l3">سرعة تحميل فائقة</li>
+            <li data-i18n="s1.l4">SSL وحماية كاملة</li>
+          </ul>
+          <div class="svc-price" data-i18n="s1.price">على حسب المشروع</div>
         </div>
-        <div id="storeDetails" class="details-empty">Select a store row to inspect its products and metadata.</div>
-      </section>
-    </section>
 
-    <section class="dashboard-grid">
-      <section class="panel span-2">
-        <div class="panel-header">
-          <h2>Recent products</h2>
-          <span id="productCount" class="pill">0 products</span>
+        <div class="svc-card">
+          <div class="svc-icon">🛒</div>
+          <h3 data-i18n="s2.h">متجر إلكتروني متكامل</h3>
+          <p data-i18n="s2.p">منصة تجارة إلكترونية احترافية مع إدارة المخزون والطلبات وبوابات الدفع</p>
+          <ul>
+            <li data-i18n="s2.l1">إدارة المنتجات والمخزون</li>
+            <li data-i18n="s2.l2">بوابات دفع متعددة</li>
+            <li data-i18n="s2.l3">تقارير المبيعات</li>
+            <li data-i18n="s2.l4">نسخة موبايل سلسة</li>
+          </ul>
+          <div class="svc-price" data-i18n="s2.price">على حسب المشروع</div>
         </div>
-        <div id="productsGrid" class="products-grid"></div>
-      </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Scan history</h2>
-          <span id="scanCount" class="pill">0 scans</span>
+        <div class="svc-card">
+          <div class="svc-icon">📧</div>
+          <h3 data-i18n="s3.h">إيميل ماركتينغ</h3>
+          <p data-i18n="s3.p">حملات بريد إلكتروني آلية وذكية تبقيك على تواصل مستمر مع عملائك</p>
+          <ul>
+            <li data-i18n="s3.l1">حملات تلقائية ذكية</li>
+            <li data-i18n="s3.l2">قوالب احترافية</li>
+            <li data-i18n="s3.l3">تتبع وتحليل النتائج</li>
+            <li data-i18n="s3.l4">تقسيم قوائم العملاء</li>
+          </ul>
+          <div class="svc-price" data-i18n="s3.price">على حسب المشروع</div>
         </div>
-        <div id="scanHistory" class="scan-list"></div>
-      </section>
-    </section>
-  </main>
+
+        <div class="svc-card">
+          <div class="svc-icon">🏗️</div>
+          <h3 data-i18n="s4.h">مواقع المقاولين</h3>
+          <p data-i18n="s4.p">موقع متخصص لشركات البناء والمقاولة يجلب الزبائن ويدير الإعلانات ويراقب المنافسين</p>
+          <ul>
+            <li data-i18n="s4.l1">عرض المشاريع والأعمال</li>
+            <li data-i18n="s4.l2">إدارة الإعلانات المدفوعة</li>
+            <li data-i18n="s4.l3">مراقبة المنافسين</li>
+            <li data-i18n="s4.l4">نموذج طلب عروض الأسعار</li>
+          </ul>
+          <div class="svc-price" data-i18n="s4.price">على حسب المشروع</div>
+        </div>
+
+        <div class="svc-card">
+          <div class="svc-icon">📢</div>
+          <h3 data-i18n="s5.h">إدارة الإعلانات</h3>
+          <p data-i18n="s5.p">إدارة احترافية لحملاتك الإعلانية على Google وMeta لتحقيق أفضل عائد على الاستثمار</p>
+          <ul>
+            <li data-i18n="s5.l1">Google Ads متقدم</li>
+            <li data-i18n="s5.l2">Facebook / Instagram Ads</li>
+            <li data-i18n="s5.l3">تحسين معدل التحويل</li>
+            <li data-i18n="s5.l4">تقارير أداء شهرية</li>
+          </ul>
+          <div class="svc-price" data-i18n="s5.price">على حسب المشروع</div>
+        </div>
+
+        <div class="svc-card">
+          <div class="svc-icon">🔍</div>
+          <h3 data-i18n="s6.h">مراقبة المنافسين</h3>
+          <p data-i18n="s6.p">نظام متكامل لتحليل منافسيك ومعرفة استراتيجياتهم لتبقى دائماً في المقدمة</p>
+          <ul>
+            <li data-i18n="s6.l1">تحليل مواقع المنافسين</li>
+            <li data-i18n="s6.l2">تتبع الكلمات المفتاحية</li>
+            <li data-i18n="s6.l3">تقارير أسبوعية</li>
+            <li data-i18n="s6.l4">فرص النمو والتميز</li>
+          </ul>
+          <div class="svc-price" data-i18n="s6.price">على حسب المشروع</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== WHY US ===== -->
+  <section class="section why-section">
+    <div class="container">
+      <div class="why-grid">
+        <div class="why-text">
+          <span class="sec-tag" data-i18n="why.tag">لماذا نكسا ستوديو؟</span>
+          <h2 data-i18n="why.title">نبني أكثر من مجرد موقع</h2>
+          <p data-i18n="why.sub">نحن لا نصمم مواقع فحسب — نبني أدوات نمو حقيقية تساعد عملك على جذب الزبائن وزيادة الأرباح.</p>
+          <div class="why-list">
+            <div class="why-item">
+              <div class="why-ico">⚡</div>
+              <div>
+                <h4 data-i18n="why.h1">تسليم سريع</h4>
+                <p data-i18n="why.p1">نلتزم بالمواعيد ونسلّم مشروعك في الوقت المحدد</p>
+              </div>
+            </div>
+            <div class="why-item">
+              <div class="why-ico">🎯</div>
+              <div>
+                <h4 data-i18n="why.h2">تصميم موجّه للنتائج</h4>
+                <p data-i18n="why.p2">كل قرار تصميمي مبني على تحسين معدلات التحويل والمبيعات</p>
+              </div>
+            </div>
+            <div class="why-item">
+              <div class="why-ico">🔧</div>
+              <div>
+                <h4 data-i18n="why.h3">دعم تقني مستمر</h4>
+                <p data-i18n="why.p3">فريقنا متاح دائماً لحل أي مشكلة أو تعديل فوري</p>
+              </div>
+            </div>
+            <div class="why-item">
+              <div class="why-ico">🌍</div>
+              <div>
+                <h4 data-i18n="why.h4">خبرة في السوق المغربي</h4>
+                <p data-i18n="why.p4">نفهم طبيعة الزبون المغربي ونصمم حلولاً تناسبه</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="why-showcase">
+          <div class="showcase-grid">
+            <div class="sc-card">
+              <div class="sc-num"><span class="counter" data-to="150">0</span>+</div>
+              <div class="sc-lbl" data-i18n="why.s1">مشروع منجز</div>
+            </div>
+            <div class="sc-card">
+              <div class="sc-num"><span class="counter" data-to="98">0</span>%</div>
+              <div class="sc-lbl" data-i18n="why.s2">رضا العملاء</div>
+            </div>
+            <div class="sc-card">
+              <div class="sc-num"><span class="counter" data-to="24">0</span>h</div>
+              <div class="sc-lbl" data-i18n="why.s3">رد خلال</div>
+            </div>
+            <div class="sc-card">
+              <div class="sc-num"><span class="counter" data-to="5">0</span></div>
+              <div class="sc-lbl" data-i18n="why.s4">سنوات خبرة</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PROCESS ===== -->
+  <section class="section" id="process">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-tag" data-i18n="proc.tag">كيف نعمل</span>
+        <h2 data-i18n="proc.title">من الفكرة إلى الإطلاق</h2>
+        <p data-i18n="proc.sub">عملية واضحة وشفافة من أول تواصل حتى التسليم النهائي</p>
+      </div>
+      <div class="process-row">
+        <div class="proc-step">
+          <div class="proc-num">01</div>
+          <div class="proc-ico">💬</div>
+          <h3 data-i18n="proc.h1">الاستشارة المجانية</h3>
+          <p data-i18n="proc.p1">نتحدث عن مشروعك ونفهم احتياجاتك وأهدافك بالكامل</p>
+        </div>
+        <div class="proc-arrow">←</div>
+        <div class="proc-step">
+          <div class="proc-num">02</div>
+          <div class="proc-ico">📋</div>
+          <h3 data-i18n="proc.h2">العرض والتصميم</h3>
+          <p data-i18n="proc.p2">نقدم عرضاً مفصلاً ونبدأ بتصميم هوية موقعك الخاصة</p>
+        </div>
+        <div class="proc-arrow">←</div>
+        <div class="proc-step">
+          <div class="proc-num">03</div>
+          <div class="proc-ico">💻</div>
+          <h3 data-i18n="proc.h3">التطوير والبناء</h3>
+          <p data-i18n="proc.p3">نبني موقعك بأحدث التقنيات مع متابعتك في كل خطوة</p>
+        </div>
+        <div class="proc-arrow">←</div>
+        <div class="proc-step">
+          <div class="proc-num">04</div>
+          <div class="proc-ico">🚀</div>
+          <h3 data-i18n="proc.h4">الإطلاق والدعم</h3>
+          <p data-i18n="proc.p4">نطلق موقعك ونضمن دعماً تقنياً مستمراً بعد التسليم</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TOOLS ===== -->
+  <section class="section" id="tools">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-tag" data-i18n="tools.tag">تقنياتنا</span>
+        <h2 data-i18n="tools.title">أدوات وتقنيات نبني بها مواقعك</h2>
+        <p data-i18n="tools.sub">نستخدم أحدث المنصات والأدوات لضمان موقع سريع وآمن وقابل للتطوير</p>
+      </div>
+      <div class="tools-grid">
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#21759b,#0073aa)">W</div><span data-i18n="tool.wp">WordPress</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#96588a,#7b2d8b)">Wc</div><span data-i18n="tool.wc">WooCommerce</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#95bf47,#5a8e1c)">Sh</div><span data-i18n="tool.sh">Shopify</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#4285f4,#1a73e8)">Ga</div><span data-i18n="tool.ga">Google Ads</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#1877f2,#0d65d9)">Fb</div><span data-i18n="tool.fb">Facebook Ads</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#ffe01b,#f7b500)">Mc</div><span data-i18n="tool.mc">Mailchimp</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#25d366,#128c7e)">Wa</div><span data-i18n="tool.wa">WhatsApp API</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#f05340,#db4437)">An</div><span data-i18n="tool.an">Google Analytics</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#61dafb,#087ea4)">Re</div><span data-i18n="tool.re">React / Next.js</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#f7df1e,#d4a017)">Js</div><span data-i18n="tool.js">JavaScript</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#2496ed,#1a6fa8)">Dk</div><span data-i18n="tool.dk">Docker / Cloud</span></div>
+        <div class="tool-card"><div class="tool-ico" style="background:linear-gradient(135deg,#f6821f,#e35b01)">Cf</div><span data-i18n="tool.cf">Cloudflare</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== PRICING ===== -->
+  <section class="section" id="pricing">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-tag" data-i18n="pkg.tag">الباقات</span>
+        <h2 data-i18n="pkg.title">اختر الباقة المناسبة لعملك</h2>
+        <p data-i18n="pkg.sub">كل باقة مخصصة — أخبرنا عن مشروعك وسنقترح الأنسب لك</p>
+      </div>
+      <div class="pricing-grid">
+
+        <div class="price-card">
+          <div class="price-head">
+            <h3 data-i18n="pkg1.name">الأساسية</h3>
+            <div class="pkg-icon">🌐</div>
+            <p data-i18n="pkg1.desc">مثالية للأعمال الناشئة والمحلات الصغيرة</p>
+          </div>
+          <ul class="price-features">
+            <li class="on" data-i18n="pkg1.f1">✓ موقع 5 صفحات</li>
+            <li class="on" data-i18n="pkg1.f2">✓ تصميم متجاوب</li>
+            <li class="on" data-i18n="pkg1.f3">✓ SSL مجاني</li>
+            <li class="on" data-i18n="pkg1.f4">✓ نموذج تواصل</li>
+            <li class="on" data-i18n="pkg1.f5">✓ تحسين SEO أساسي</li>
+            <li class="off" data-i18n="pkg1.f6">✗ لوحة تحكم CMS</li>
+            <li class="off" data-i18n="pkg1.f7">✗ إيميل ماركتينغ</li>
+          </ul>
+          <a href="#contact" class="btn-outline" data-i18n="pkg.cta">احصل على عرض</a>
+        </div>
+
+        <div class="price-card featured-price">
+          <div class="price-badge" data-i18n="pkg.popular">الأكثر طلباً</div>
+          <div class="price-head">
+            <h3 data-i18n="pkg2.name">الاحترافية</h3>
+            <div class="pkg-icon">🚀</div>
+            <p data-i18n="pkg2.desc">للأعمال المتوسطة والنامية</p>
+          </div>
+          <ul class="price-features">
+            <li class="on" data-i18n="pkg2.f1">✓ صفحات غير محدودة</li>
+            <li class="on" data-i18n="pkg2.f2">✓ لوحة تحكم CMS كاملة</li>
+            <li class="on" data-i18n="pkg2.f3">✓ إيميل ماركتينغ أساسي</li>
+            <li class="on" data-i18n="pkg2.f4">✓ ربط السوشيال ميديا</li>
+            <li class="on" data-i18n="pkg2.f5">✓ تحسين SEO متقدم</li>
+            <li class="on" data-i18n="pkg2.f6">✓ تقارير تحليلية</li>
+            <li class="off" data-i18n="pkg2.f7">✗ متجر إلكتروني</li>
+          </ul>
+          <a href="#contact" class="btn-primary" data-i18n="pkg.cta">احصل على عرض</a>
+        </div>
+
+        <div class="price-card">
+          <div class="price-head">
+            <h3 data-i18n="pkg3.name">المتكاملة</h3>
+            <div class="pkg-icon">💎</div>
+            <p data-i18n="pkg3.desc">للمتاجر والأعمال الكبيرة</p>
+          </div>
+          <ul class="price-features">
+            <li class="on" data-i18n="pkg3.f1">✓ كل ما في الاحترافية</li>
+            <li class="on" data-i18n="pkg3.f2">✓ متجر إلكتروني كامل</li>
+            <li class="on" data-i18n="pkg3.f3">✓ إدارة المخزون</li>
+            <li class="on" data-i18n="pkg3.f4">✓ بوابات دفع متعددة</li>
+            <li class="on" data-i18n="pkg3.f5">✓ إيميل ماركتينغ متقدم</li>
+            <li class="on" data-i18n="pkg3.f6">✓ مراقبة المنافسين</li>
+            <li class="on" data-i18n="pkg3.f7">✓ دعم تقني 6 أشهر</li>
+          </ul>
+          <a href="#contact" class="btn-outline" data-i18n="pkg.cta">احصل على عرض</a>
+        </div>
+
+      </div>
+      <p class="pricing-note" data-i18n="pkg.note">* عرض مخصص مجاني حسب احتياجات مشروعك — تواصل معنا الآن</p>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS ===== -->
+  <section class="section" id="testimonials">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-tag" data-i18n="tst.tag">آراء عملائنا</span>
+        <h2 data-i18n="tst.title">ماذا يقول من عملوا معنا</h2>
+      </div>
+      <div class="testi-grid">
+
+        <div class="testi-card">
+          <div class="testi-stars">★★★★★</div>
+          <p data-i18n="tst.q1">"نكسا ستوديو غيّرت وجه أعمالي. الموقع جلب لي زبائن جدد كل أسبوع والإيميل ماركتينغ يعمل تلقائياً بدون تدخل مني."</p>
+          <div class="testi-author">
+            <div class="testi-avatar">يس</div>
+            <div>
+              <strong>يوسف الأمراني</strong>
+              <small data-i18n="tst.r1">مقاول — الدار البيضاء</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card featured-testi">
+          <div class="testi-stars">★★★★★</div>
+          <p data-i18n="tst.q2">"أنجزوا متجري الإلكتروني في أسبوعين مع لوحة تحكم سهلة جداً. مبيعاتي ارتفعت بـ 40% في أول شهر!"</p>
+          <div class="testi-author">
+            <div class="testi-avatar">فا</div>
+            <div>
+              <strong>فاطمة الزهراء بنعلي</strong>
+              <small data-i18n="tst.r2">متجر أزياء — مراكش</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card">
+          <div class="testi-stars">★★★★★</div>
+          <p data-i18n="tst.q3">"خدمة ممتازة بأسعار معقولة. بنوا موقع عيادتي مع نظام الحجز وأصبح 80% من مرضاي يحجزون عبر الإنترنت."</p>
+          <div class="testi-author">
+            <div class="testi-avatar">كا</div>
+            <div>
+              <strong>د. كريم الحسناوي</strong>
+              <small data-i18n="tst.r3">طبيب أسنان — الرباط</small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CONTACT FORM ===== -->
+  <section class="section contact-section" id="contact">
+    <div class="container">
+      <div class="contact-wrap">
+
+        <div class="contact-left">
+          <span class="sec-tag" data-i18n="ct.tag">تواصل معنا</span>
+          <h2 data-i18n="ct.title">احصل على عرض مجاني</h2>
+          <p data-i18n="ct.sub">أخبرنا عن مشروعك وسنرسل لك عرضاً مفصّلاً خلال 24 ساعة</p>
+          <div class="contact-infos">
+            <div class="ci">
+              <span class="ci-ico">📱</span>
+              <div><b data-i18n="ct.c1">واتساب</b><small>+212 6XX XXX XXX</small></div>
+            </div>
+            <div class="ci">
+              <span class="ci-ico">📧</span>
+              <div><b data-i18n="ct.c2">البريد الإلكتروني</b><small>contact@nexastudio.ma</small></div>
+            </div>
+            <div class="ci">
+              <span class="ci-ico">📍</span>
+              <div><b data-i18n="ct.c3">الموقع</b><small>الدار البيضاء، المغرب</small></div>
+            </div>
+          </div>
+          <div class="trust-badges">
+            <div class="trust-b" data-i18n="ct.t1">⚡ رد خلال 24 ساعة</div>
+            <div class="trust-b" data-i18n="ct.t2">🔒 معلوماتك محمية</div>
+            <div class="trust-b" data-i18n="ct.t3">✅ استشارة مجانية</div>
+          </div>
+        </div>
+
+        <div class="contact-right">
+          <form class="cform" id="contactForm" novalidate>
+
+            <div class="form-row-2">
+              <div class="fgroup">
+                <label for="fname"><span data-i18n="form.name">الاسم الكامل</span> <span class="req">*</span></label>
+                <input type="text" id="fname" name="fname" placeholder="محمد العلوي" required />
+                <span class="ferr" id="fnameErr"></span>
+              </div>
+              <div class="fgroup">
+                <label for="fphone"><span data-i18n="form.phone">رقم الهاتف</span> <span class="req">*</span></label>
+                <input type="tel" id="fphone" name="fphone" placeholder="+212 6XX XXX XXX" required />
+                <span class="ferr" id="fphoneErr"></span>
+              </div>
+            </div>
+
+            <div class="fgroup">
+              <label for="femail"><span data-i18n="form.email">البريد الإلكتروني</span> <span class="req">*</span></label>
+              <input type="email" id="femail" name="femail" placeholder="email@example.com" required />
+              <span class="ferr" id="femailErr"></span>
+            </div>
+
+            <div class="fgroup">
+              <label for="fbusiness"><span data-i18n="form.biz">نوع نشاطك التجاري</span> <span class="req">*</span></label>
+              <select id="fbusiness" name="fbusiness" required>
+                <option value="" disabled selected data-i18n="form.bizPh">اختر نوع عملك</option>
+                <option value="contractor">مقاول / شركة بناء</option>
+                <option value="ecommerce">متجر / تجارة إلكترونية</option>
+                <option value="restaurant">مطعم / كافيه</option>
+                <option value="services">شركة خدمات</option>
+                <option value="clinic">عيادة / صيدلية</option>
+                <option value="education">مدرسة / مركز تكوين</option>
+                <option value="hotel">فندق / شقق سياحية</option>
+                <option value="retail">محل تجاري</option>
+                <option value="company">شركة / مؤسسة عامة</option>
+                <option value="other">أخرى</option>
+              </select>
+              <span class="ferr" id="fbusinessErr"></span>
+            </div>
+
+            <div class="fgroup">
+              <label data-i18n="form.svcs">الخدمات التي تحتاجها</label>
+              <div class="checks-grid">
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="website-cms">
+                  <span class="chk-box"></span>
+                  <span>موقع مع لوحة تحكم</span>
+                </label>
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="ecommerce">
+                  <span class="chk-box"></span>
+                  <span>متجر إلكتروني</span>
+                </label>
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="email-marketing">
+                  <span class="chk-box"></span>
+                  <span>إيميل ماركتينغ</span>
+                </label>
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="ads">
+                  <span class="chk-box"></span>
+                  <span>إدارة الإعلانات</span>
+                </label>
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="competitor">
+                  <span class="chk-box"></span>
+                  <span>مراقبة المنافسين</span>
+                </label>
+                <label class="chk-item">
+                  <input type="checkbox" name="svc" value="stock">
+                  <span class="chk-box"></span>
+                  <span>إدارة المخزون</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="fgroup">
+              <label for="fbudget"><span data-i18n="form.budget">الميزانية المتاحة</span> <span class="req">*</span></label>
+              <select id="fbudget" name="fbudget" required>
+                <option value="" disabled selected data-i18n="form.budgetPh">اختر ميزانيتك</option>
+                <option value="lt150">أقل من 150 €</option>
+                <option value="150-300">150 — 300 €</option>
+                <option value="300-600">300 — 600 €</option>
+                <option value="600-1200">600 — 1,200 €</option>
+                <option value="gt1200">أكثر من 1,200 €</option>
+              </select>
+              <span class="ferr" id="fbudgetErr"></span>
+            </div>
+
+            <div class="fgroup">
+              <label for="fdesc" data-i18n="form.desc">وصف مختصر للمشروع</label>
+              <textarea id="fdesc" name="fdesc" rows="4" placeholder="أخبرنا عن مشروعك وما الذي تريد تحقيقه..."></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary form-btn" id="submitBtn">
+              <span data-i18n="form.send">إرسال طلبك الآن</span> <span class="btn-arrow">←</span>
+            </button>
+
+          </form>
+
+          <div class="form-success" id="formSuccess">
+            <div class="success-anim">✅</div>
+            <h3 data-i18n="form.ok1">تم إرسال طلبك بنجاح!</h3>
+            <p data-i18n="form.ok2">سيتواصل معك فريقنا خلال 24 ساعة لمناقشة مشروعك وتقديم عرض مخصص.</p>
+            <a href="#services" class="btn-ghost" data-i18n="form.ok3">تصفح خدماتنا</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="url(#g2)"/><defs><linearGradient id="g2" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs></svg>
+            <span>Nexa<strong>Studio</strong></span>
+          </a>
+          <p data-i18n="ft.about">وكالة رقمية متكاملة متخصصة في بناء المواقع والمتاجر الإلكترونية والتسويق الرقمي في المغرب.</p>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="ft.h1">خدماتنا</h4>
+          <ul>
+            <li><a href="#services" data-i18n="ft.s1">مواقع مع لوحة تحكم</a></li>
+            <li><a href="#services" data-i18n="ft.s2">متاجر إلكترونية</a></li>
+            <li><a href="#services" data-i18n="ft.s3">إيميل ماركتينغ</a></li>
+            <li><a href="#services" data-i18n="ft.s4">مواقع المقاولين</a></li>
+            <li><a href="#services" data-i18n="ft.s5">إدارة الإعلانات</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="ft.h2">روابط سريعة</h4>
+          <ul>
+            <li><a href="#tools" data-i18n="nav.tools">أدواتنا</a></li>
+            <li><a href="#pricing" data-i18n="nav.pricing">الباقات</a></li>
+            <li><a href="#testimonials" data-i18n="nav.testi">آراء العملاء</a></li>
+            <li><a href="#contact" data-i18n="ct.tag">تواصل معنا</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>تواصل معنا</h4>
+          <p>📱 +212 6XX XXX XXX</p>
+          <p>📧 contact@nexastudio.ma</p>
+          <p>📍 الدار البيضاء، المغرب</p>
+          <div class="socials">
+            <a href="#" aria-label="Facebook">f</a>
+            <a href="#" aria-label="Instagram">ig</a>
+            <a href="#" aria-label="LinkedIn">in</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 NexaStudio — جميع الحقوق محفوظة</p>
+        <p>صُنع بـ ❤️ في المغرب</p>
+      </div>
+    </div>
+  </footer>
 
   <script src="/app.js" defer></script>
 </body>
